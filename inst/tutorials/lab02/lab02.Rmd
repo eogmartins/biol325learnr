@@ -1,0 +1,602 @@
+---
+title: "Importing and Wrangling Data in R"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: false
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(learnr)
+library(gradethis)
+knitr::opts_chunk$set(echo = FALSE)
+gradethis_setup()
+```
+
+## Tutorial Dataset: Palmer Penguins
+
+We will use a teaching subset of the [Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/) dataset stored in the `data/` folder within the working directory of this tutorial. As described on their website:
+
+> Data were collected and made available by [Dr. Kristen Gorman](https://www.uaf.edu/cfos/people/faculty/detail/kristen-gorman.php) and the [Palmer Station, Antarctica LTER](https://pallter.marine.rutgers.edu/), a member of the [Long Term Ecological Research Network](https://lternet.edu/).
+
+**palmerpenguis package citation:** Horst AM, Hill AP, Gorman KB (2020). palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package version 0.1.0. <https://allisonhorst.github.io/palmerpenguins/>. doi: 10.5281/zenodo.3960218.
+
+**Data originally published in:** Gorman KB, Williams TD, Fraser WR (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus Pygoscelis). PLoS ONE 9(3):e90081. <https://doi.org/10.1371/journal.pone.0090081>
+
+We’ll work with the same data saved in three different file formats so you can practice multiple import workflows.
+
+------------------------------------------------------------------------
+
+## 1. Loading tidyverse
+
+Before we begin importing and wrangling the Palmer Penguins data, we need to load package **tidyverse**.
+
+**Your Turn**: The package tidyverse is already installed. All you need to do it is load it for use in this lab section.
+
+```{r load_tidyverse, exercise = TRUE, exercise.eval = FALSE}
+# Load package tidyverse ----
+```
+
+```{r load_tidyverse-hint}
+# Load package tidyverse ----
+library(____)
+```
+
+```{r load_tidyverse-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Load package tidyverse ----
+library(tidyverse)
+```
+
+```{r load_tidyverse-check, include = FALSE}
+grade_this_code() 
+```
+
+## 2. Importing data
+
+The three most common file formats you will encounter when working with ecological data sets are text files with comma-separated values (CSV), text files with values separated by tabs (TXT), and Excel files (XLSX). In this section, you will learn how to import all three file formats into R.
+
+### Exercise 2.1: Importing CSV files
+
+To import CSV files, we will use the function [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) from package [readr](https://readr.tidyverse.org/index.html) (included with the tidyverse). This function reads comma-separated files into a data frame. However, the data frame produced by the function is a special one created and used by functions in the tidyverse called a [tibble](https://tibble.tidyverse.org/articles/tibble.html). A tibble still behaves and works as a data frame like you learned in the first lab, but has a nicer and more informative layout when you print it to the R console.
+
+**Your Turn:** Replace the blanks by the data folder name (`data`) followed by the CSV file name containing the penguins data, which is called `penguins.csv` (do not forget to write the .csv extension)
+
+```{r read_csv, exercise = TRUE, exercise.eval = FALSE,  exercise.setup = "load_tidyverse-solution"}
+penguins_csv <- read_csv("____/____")
+```
+
+```{r read_csv-hint}
+penguins_csv <- read_csv("data/____")
+```
+
+```{r read_csv-solution, exercise.reveal_solution = FALSE, include = FALSE}
+penguins_csv <- read_csv("data/penguins.csv")
+```
+
+```{r read_csv-check, include = FALSE}
+grade_this_code(correct = "Read the output printed above (this would show up in the R console if you were in RStudio). When you import with `read_csv()`, you’ll see:
+- how many **rows/columns** were read
+- the **column types** (e.g., numeric or <dbl>, character or <chr>)
+- reminders for how to show or quiet that message
+
+That message is important, as it helps you catch problems early (e.g., a numeric variable imported as text).") 
+```
+
+### Exercise 2.2: Print the data frame (tibble) to the console
+
+It's good practice to look at the imported data frame.
+
+**Your Turn**: Replace the blanks by the name of the variable you assigned the imported data to.
+
+```{r print_csv, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "read_csv-solution"}
+print(____)
+
+____
+```
+
+```{r print_csv-hint}
+print(penguins_csv)
+
+____
+```
+
+```{r print_csv-solution, exercise.reveal_solution = FALSE, include = FALSE}
+print(penguins_csv)
+
+penguins_csv
+```
+
+```{r print_csv-check, include = FALSE}
+grade_this_code(correct = "Look at the outputs above. The top one shows the data frame in tibble format that you would see printed to the R console if you were working in RStudio. Differently from a regular data frame, when you print a tibble, you will see by default just the top 10 rows of the data frame. You will also see the dimensions (number of rows x columns) of the data frame and the variable type under each column name (e.g., *chr* for character, *fct* for factor, *dbl* for numeric etc). It may not show you all the variables (columns) if it can't fit them all in the R cosole window, but it will list the ommited variable names at the bottom of the output.
+
+By the way, you don't need to use the function `print()`, like we did here, if you're using RStudio to print the tibble to the console. We use `print()` here to force `learnr` to print the data frame as you would see it in the R Console.
+
+This is because if we just type the name of the data frame we want to print in the `learnr` tutorial and execute it, it will show us the data frame as a formatted table in an RMarkdown/Quarto document as you can also see above. Note that this can be quite handy by easily allowing you to navigate through many pages of data. Give it a try above.") 
+```
+
+### Exercise 2.3: Glimpse the data frame (tibble)
+
+In the previous lab, you learned about the useful function `str()`, which will print the variable names of a data frame, followed by their type, and their inital values. The tidyverse package has a function with similar functionality, `glimpse()`, but with a cleaner output.
+
+**Your Turn**: Replace the blanks by the name of the variable you assigned the imported data to.
+
+```{r glimpse_csv, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "read_csv-solution"}
+glimpse(____)
+```
+
+```{r glimpse_csv-hint}
+glimpse(penguins_csv)
+```
+
+```{r glimpse_csv-solution, exercise.reveal_solution = FALSE, include = FALSE}
+glimpse(penguins_csv)
+```
+
+```{r glimpse_csv-check, include = FALSE}
+grade_this_code(correct = "Notice how the ouput of `glimpse()` can also be useful as an initial check after importing your data.") 
+```
+
+### Exercise 2.4: Importing TXT files
+
+To import TXT files with values separated by tabs, we will use the function [`read_tsv()`](https://readr.tidyverse.org/reference/read_delim.html) from package [readr](https://readr.tidyverse.org/index.html) (included with the tidyverse).
+
+**Your Turn:** Replace the blanks so that function `read_tsv()` reads in the penguins data file with tab-separated values `penguins.txt`, and assigns it to a variable named `penguins_tsv`. Then type fill the blanks to print `penguin_tsv` to the console.
+
+```{r read_tsv, exercise = TRUE, exercise.eval = FALSE,  exercise.setup = "load_tidyverse-solution"}
+____ <- read_tsv(____)
+
+print(____)
+```
+
+```{r read_tsv-hint-1}
+# Remember to include the data folder, the extension 
+# .txt to the file name, and to add quotation marks 
+# around the file path.
+```
+
+```{r read_tsv-hint-2}
+penguins_tsv <- read_tsv("data/____")
+
+print(penguins_tsv)
+```
+
+```{r read_tsv-solution, exercise.reveal_solution = FALSE, include = FALSE}
+penguins_tsv <- read_tsv("data/penguins.txt")
+
+print(penguins_tsv)
+```
+
+```{r read_tsv-check, include = FALSE}
+grade_this_code(correct = "Good work!") 
+```
+
+### Exercise 2.5: Importing XLSX files
+
+To import XLSX files (i.e., Microsoft Excel files), we will use the function [`read_excel()`](https://readxl.tidyverse.org/reference/read_excel.html) from package [readxl](https://readxl.tidyverse.org/) (included with the tidyverse).
+
+NOTE: Excel files can have data in different **sheets**. The `read_excel()` function by default reads in data in the first sheet. You can specify which sheet to read in either by their position starting with 1 for the leftmost sheet or, better yet, by their name. This is what we use below just to show you how, but it would not be necessary for this file because it only contains one sheet.
+
+**Your Turn:** Replace the blanks so that function `read_excel()` reads in the penguins Excel data file `penguins.xlsx`, and assigns it to a variable named `penguins_xlsx`. Then fill the blanks to print `penguin_xlsx` to the console.
+
+```{r read_excel, exercise = TRUE, exercise.eval = FALSE,  exercise.setup = "load_tidyverse-solution"}
+____ <- read_excel(____, sheet = "Sheet1")
+
+print(____)
+```
+
+```{r read_excel-hint-1}
+# Remember to include the data folder, the extension .xlsx
+# to the file name, and to add quotation marks around the 
+# file path.
+```
+
+```{r read_excel-hint-2}
+penguins_xlsx <- read_excel("data/____", sheet = "Sheet1")
+
+print(penguins_xlsx)
+```
+
+```{r read_excel-solution, exercise.reveal_solution = FALSE, include = FALSE}
+penguins_xlsx <- read_excel("data/penguins.xlsx", sheet = "Sheet1")
+
+print(penguins_xlsx)
+```
+
+```{r read_excel-check, include = FALSE}
+grade_this_code(correct = "Good work!") 
+```
+
+## 3. Wrangling data
+
+Data wrangling is a set of steps used to clean, organize, transform, and combine data so that it can be analyzed correctly and efficiently. This is a very important step before you start exploring and analyzing your data and sometimes may comprise the bulk of the time you will spend in RStudio.
+
+For example, imagine you want to analyze fish growth across different water bodies:
+
+**Raw data:**
+
+-   Water body names spelled differently (“Stellako”, “Stellako River”)
+-   Length recorded sometimes in mm, sometimes in cm
+-   Dates stored as text
+
+**Data wrangling tasks:**
+
+-   Standardize lake names
+-   Convert all lengths to the same unit
+-   Create new variables based on length (e.g., developmental stage)
+-   Convert dates to proper date format
+-   Remove incomplete records (e.g., observations where fish length is missing)
+
+Only after this do you start analyzing fish growth and comparing that between water bodies.
+
+### 
+
+The tidyverse “grammar” of data wrangling (aka manipulation) is mostly implemented in the package [dplyr](dplyr%20overview:%20https://dplyr.tidyverse.org/). Here, we’ll focus on the following workhorse verbs (functions):
+
+-   [`filter()`](https://dplyr.tidyverse.org/reference/filter.html): keeps rows that match conditions
+-   [`select()`](https://dplyr.tidyverse.org/reference/select.html): keeps (or removes or reorders) columns
+-   [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html): creates or modifies columns
+-   [`rename()`](https://dplyr.tidyverse.org/reference/rename.html): renames columns
+-   [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html): defines groups for grouped operations
+-   [`summarise()`](https://dplyr.tidyverse.org/reference/summarise.html): reduces each group to one row of summaries
+
+### 
+
+The tidyverse also makes data wrangling easier with the use of the pipe (`|>`). The pipe passes the result of one step of data wrangling into the next step, so your code reads top-to-bottom.
+
+> Think of the pipe as meaning **and then**.
+
+Whatever comes before the pipe is automatically used as the first argument of the function that comes after it.
+
+Example structure:
+
+```{r}
+#| eval: false
+#| echo: true
+
+data |>
+  step_1() |>
+  step_2() |>
+  step_3()
+```
+
+This reads as:
+
+-   Take the data, **and then**
+-   do step1, **and then**
+-   do step2, **and then**
+-   do step3.
+
+Here is an example with a hypothetical fish data set:
+
+```{r}
+#| eval: false
+#| echo: true
+fish |>
+  filter(species == "Rainbow Trout") |>
+  mutate(length_cm = length_mm / 10) |>
+  group_by(sex) |>
+  summarise(mean_length = mean(length_cm))
+```
+
+This reads as:
+
+-   Take the fish data frame, **and then**
+-   filter it so we keep only observations where the `species` variable value is *Rainbow Trout*, **and then**
+-   create a variable named `length_cm` by dividing the existing variable `length_mm` by 10, **and then**
+-   group the observations by the variable `sex`, **and then**
+-   summarize the data by creating a new variable named `mean_length` that is computed as the mean of `length_cm` (this is computed by `sex` because we grouped the data by sex before this step).
+
+Now check out how much more readable the code above using the pipe is compared to the code below performing the same data wrangling tasks without the use of the pipe, which requires us to nest the functions into one another.
+
+```{r}
+#| eval: false
+#| echo: true
+summarise(
+  filter(
+    mutate(fish, length_cm = length_mm / 10),
+    species == "Rainbow Trout"
+  ),
+  mean_length = mean(length_cm), .by = sex
+)
+```
+
+### Exercise 3.1: Filtering, grouping and summarizing data
+
+Sometimes you will want to subset or filter your data set based on values of certain variables. This can be done with function [`filter()`](https://dplyr.tidyverse.org/reference/filter.html). 
+
+Also, you may want to do some computations separately for each category or group in the data set. This can be done by combining functions [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) and [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html).
+
+**Your Turn:** Using the `penguins_csv` data frame you created in exercise 2.1, create a summary table (data frame) for the *Adelie* `species` and `year` *2008* that shows mean of `body_mass_g` by `island`.
+
+```{r wrangle_1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "read_csv-solution"}
+____ |>
+  filter(year == ____,
+         species == ____) |>
+  group_by(____) |>
+  summarise(
+    mean_mass_g = mean(____, na.rm = TRUE),
+    n = n()
+  )
+```
+
+```{r wrangle_1-hint-1}
+# Hint 1: The blanks need to be replaced with variable 
+# names shown with a gray background in the instructions above, 
+# whereas blanks for specific values for year and species must be
+# replaced with the values shown in italic. Also ensure 
+# that character values are enclosed by quotation marks.
+```
+
+```{r wrangle_1-hint-2}
+# Hint 2: Filter to year 2008 and species Adelie
+penguins_csv |>
+  filter(year == 2008,
+         species == "Adelie") |>
+  group_by(____) |>
+  summarise(
+    mean_mass_g = mean(____, na.rm = TRUE),
+    n = n()
+  )
+```
+
+```{r wrangle_1-hint-3}
+# Hint 3: Group by island
+penguins_csv |>
+  filter(year == 2008,
+         species == "Adelie") |>
+  group_by(island) |>
+  summarise(
+    mean_mass_g = mean(____, na.rm = TRUE),
+    n = n()
+  )
+```
+
+```{r wrangle_1-hint-4}
+# Hint 3: Compute mean of body_mass_g
+penguins_csv |>
+  filter(year == 2008,
+         species == "Adelie") |>
+  group_by(island) |>
+  summarise(
+    mean_mass_g = mean(body_mass_g, na.rm = TRUE),
+    n = n()
+  )
+```
+
+```{r wrangle_1-solution, exercise.reveal_solution = FALSE, include = FALSE}
+penguins_csv |>
+  filter(year == 2008,
+         species == "Adelie") |>
+  group_by(island) |>
+  summarise(
+    mean_mass_g = mean(body_mass_g, na.rm = TRUE),
+    n = n()
+  )
+```
+
+```{r wrangle_1-check, include = FALSE}
+grade_this_code(correct = "Good work. Check out the summary table you created above.
+
+Recall what each function did:
+- `filter(...)` told R to keep only observations with `year` 2008 and `species` Adelie
+- `group_by(island)` told R to do computations separately for each island
+- `summarise(...)` told R to summarize data from each island to **one row** with the mean of `body_mass_g` and the number of observations (function `n()` counts the number of observations)
+
+NOTE: the `na.rm = TRUE` tells `mean()` to ignore missing values. If we don't set this and there is a missing value in the variable, we would get NA for the mean.")
+```
+
+### Exercise 3.2: Mutating and selecting variables
+
+You will often need to create new variables (sometimes derived from existing variables in the data frame). This can be done with function [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html). The nice thing about mutate is that you can do a series of variable transformations continuing from the variables created in the previous steps of mutate. 
+
+See the example below where, using the hypothetical  data set `fish`, we first convert fish length in mm to cm. Then we create a new variable, `size class`, to categorize fish into *Small* or *Large* based on whether or not they are smaller than 18 cm. Finally we compute a new variable called `condition`. Note that the two new variables were created using the `length_cm` variable that was created in the first step of `mutate()`. This was all done by  adding each subsequent data transformation/creation within `mutate()` separated by comma.
+
+```{r}
+#| eval: false
+#| echo: true
+
+fish |>
+  mutate(length_cm = length_mm / 10,
+         size_class = if_else(length_cm < 18, "Small", "Large"),
+         condition = weight_g / (length_cm ^ 3))
+```
+
+Also, you may want to select variables to keep (or drop) to have a cleaner data frame. For example, we could use [`select()`](https://dplyr.tidyverse.org/reference/select.html) to keep all variables in the `fish` data frame, except for `length_mm`, since we may prefer to work with `length_cm`. 
+
+**Your Turn**: Using the `penguins_csv` data frame you created in exercise 2.1, create a new variable with body mass in **kg** called `body_mass_kg` from `body_mass_g` (remeber: 1 kg = 1000 g). Then keep only the variables `species`, `island`, and `body_mass_kg`.
+
+
+```{r wrangle_2, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "read_csv-solution"}
+____ |>
+  mutate(____ = ____ / ____) |>
+  select(____, ____, ____)
+```
+
+```{r wrangle_2-hint-1}
+# Hint 1: The blanks need to be replaced with variable 
+# names shown with a gray background in the instructions above, 
+# as well as 1000 in the body mass conversion ratio.`
+```
+
+```{r wrangle_2-hint-2}
+# Hint 2: Add body_mass_kg and body_mass_g to mutate(). What is the value that 
+# should go in the denominator for converting body mass in g to kg?
+
+penguins_csv |>
+  mutate(body_mass_kg = body_mass_g / ____) |>
+  select(____, ____, ____)
+```
+
+```{r wrangle_2-hint-3}
+# Hint 3: Type the variables you were instructed to keep within select().
+
+penguins_csv |>
+  mutate(body_mass_kg = body_mass_g / 1000) |>
+  select(species, island, body_mass_kg)
+```
+
+```{r wrangle_2-solution, exercise.reveal_solution = FALSE, include = FALSE}
+penguins_csv |>
+  mutate(body_mass_kg = body_mass_g / 1000) |>
+  select(species, island, body_mass_kg)
+```
+
+```{r wrangle_2-check, include = FALSE}
+grade_this_code(correct = "Good work. Notice that now you have a data frame with only the variables you selected, including the body mass in kg that you created with `mutate()`. These variables will appear in the order you listed them within `select()`, so you can also just use the function to simply re-order how variables appear in the data frame.
+
+A couple things about `select()`:
+
+- If you have a data frame with several variables and all you want is to drop a few variables, it is quicker to tell `select()` what to drop rather than what to keep. This can be done by adding the **minus** sign in front of the name of the variable you want to drop. For example, if we simply wanted to drop the variable `body_mass_g` and keep all the others in `penguins_csv` we could instead use above:
+
+`select(-body_mass_g)`
+
+- If you need to indicate a number of variables that occur in sequence in a data frame, you can use a **colon** between the first and last variable to select, rather than typing the name of all variables in the sequence. For example, if we wanted to keep all variables  that occur between (and including) `species` and `sex` in the data frame and then `body_mass_kg`, we could instead use above:
+
+`select(species:sex, body_mass_kg)`")
+```
+
+## 4. Reshaping data
+### 
+In ecology, you’ll often see data in **wide** or **long** format.
+
+A dataset is wide when different measurements of the same variable are stored in different columns. In these data sets:
+
+-   Each row represents one **observational unit** (e.g., a site or individual). 
+-   Each column represents measurements of the same variable (e.g., temperature, growth rate) taken at different levels of another variable, usually a factor (e.g. different years, treatments).
+
+For example, the table below shows a wide data set. Here, each row represents a habitat and each column is a different year between 2021 and 2023. The values within the cells of each column are measurements of the same variable (e.g. mean temperature) computed for each year. Note that a given observation unit (e.g., Forest) is represented by a single row and the multiple or repeated measurements taken from it over years are spread across columns.
+
+| habitat   | 2021 | 2022 | 2023 |
+|:--------- |:---- |:---- |:---- |
+| Forest    | 16.2 | 17.1 | 17.2 |
+| Grassland | 22.2 | 23.3 | 24.0 |
+| Wetland   | 18.2 | 18.5 | 18.6 |
+
+A data set is long when each variable is placed in their own column. In these data sets:
+
+  - Each row represents **one observation**.
+  - Each column represents a different variable.
+
+In this format, our table above would be reshaped to the table shown below so that one column stores the levels of the factor variable (e.g., `year`), and another column stores the value of the measured variable (e.g., `temperature`). Note that each individual observation is represented by a single row, so that now we have to repeat the observational units (e.g., Forest) across rows to accommodate all their individual measurements.
+
+| habitat   | year | temperature |
+|:--------- |:---- |:----------- |
+| Forest    | 2021 | 16.2        |
+| Forest    | 2022 | 17.1        |
+| Forest    | 2023 | 17.2        |
+| Grassland | 2021 | 22.2        |
+| Grassland | 2022 | 23.3        |
+| Grassland | 2023 | 24.0        |
+| Wetland   | 2021 | 18.2        |
+| Wetland   | 2022 | 18.5        |
+| Wetland   | 2023 | 18.6        |
+
+Compare the two tables above and make sure you understand their difference. Also try and visualize how you would move from one format to another.
+
+In general, the long format is preferred because it matches how data are analyzed in R and in statistics more broadly. It makes operations simpler, more flexible, and more scalable. Most of the functions we will use in R, including those from the tidyverse package and several statistical modeling functions, require data to be in the long format.
+
+### 
+
+Keeping with the Palmer Penguins data theme, we’ll create a tiny dataset of mean body mass (g) by island and year. We we'll use the function [`tibble()`](https://tibble.tidyverse.org/reference/tibble.html) from package [`tibble`](https://tibble.tidyverse.org/) to create the new data frame.
+
+**Your Turn:** Just inspect the code below. Note that we need to enclose variable names made up of only numbers with the back tick symbol. After inspecting the code, press **Submit Answer**
+
+```{r wide_data, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "read_csv-solution"}
+mass_wide <- tibble(
+  island = c("Biscoe", "Dream", "Torgersen"),
+  `2007` = c(3700, 3600, 3500), # values are penguin mean body mass in g 
+  `2008` = c(3800, 3650, 3600), # values are penguin mean body mass in g  
+  `2009` = c(3900, 3700, 3650)  # values are penguin mean body mass in g 
+)
+
+mass_wide
+```
+
+```{r wide_data-solution, exercise.reveal_solution = FALSE, include = FALSE}
+mass_wide <- tibble(
+  island = c("Biscoe", "Dream", "Torgersen"),
+  `2007` = c(3700, 3600, 3500), # values are penguin mean body mass in g 
+  `2008` = c(3800, 3650, 3600), # values are penguin mean body mass in g 
+  `2009` = c(3900, 3700, 3650)  # values are penguin mean body mass in g 
+)
+
+mass_wide
+```
+
+```{r wide_data-check, include = FALSE}
+grade_this_code(correct = "Inspect the printed data frame. This is in the wide format because each row represents one observational unit (an island), and each year is its own column (2007, 2008, 2009). Each value represents the mean weight of penguins on an island in a given year.
+                
+Also, make sure you understand how we used the function `tibble()` to create this data frame.")
+```
+
+### Exercise 4.1: Wide → Long
+
+To convert a data frame from the wide to the long format, we'll use the [`pivot_longer()`](https://tidyr.tidyverse.org/reference/pivot_longer.html) function from tidyverse package [tidyr](https://tidyr.tidyverse.org/index.html). It takes several columns and collapses them into a key-value pair of variables.
+
+**Your Turn**: Just inspect the code below converting our `mass_wide` data frame into the long format. 
+
+-   Note that we need to indicate the columns we want to reshape into long format with argument `cols`.
+-   In argument `names_to`, we tell the function how we want the variable holding the year values to be called. 
+-   Finally, in argument `values_to`, we tell it how we want the variable holding the measurements of mean body mass to be called. 
+
+After inspecting the code, press **Submit Answer**.
+
+```{r wide2long_data, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "wide_data"}
+mass_long <- mass_wide |>
+  pivot_longer(cols = `2007`:`2009`, 
+               names_to = "year", 
+               values_to = "mean_mass")
+
+mass_long
+```
+
+```{r wide2long_data-solution, exercise.reveal_solution = FALSE, include = FALSE}
+mass_long <- mass_wide |>
+  pivot_longer(cols = `2007`:`2009`, 
+               names_to = "year", 
+               values_to = "mean_mass")
+
+mass_long
+```
+
+```{r wide2long_data-check, include = FALSE}
+grade_this_code(correct = "Compare it to the wide format of this data set above. This is a function that can save you lots of time, as reshaping data frames by hand (e.g., in Excel) is a time consuming process...")
+```
+
+### Exercise 4.2: Long → Wide
+
+For the last exercise, let's convert the data frame in the long format back to the wide format. We'll use the [`pivot_wider()`](https://tidyr.tidyverse.org/reference/pivot_wider.html) function from tidyverse package [tidyr](https://tidyr.tidyverse.org/index.html). It takes a key-value pair of variables and spreads it back out into multiple columns.
+
+**Your Turn**: Just inspect the code below converting our `mass_long` data frame into the wide format again. 
+
+-   In argument `names_from`, we tell the function that we want the values in the `year` variable to be used as column names. 
+-   In argument `values_from`, we tell it that we want the values in the `mean_mass` variable to be used to populate the cells in the new year columns. 
+
+After inspecting the code, press **Submit Answer**.
+
+```{r long2wide_data, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "wide2long_data"}
+mass_wide_again <- mass_long |>
+  pivot_wider(names_from = "year", 
+              values_from = "mean_mass")
+
+mass_wide_again
+```
+
+```{r long2wide_data-solution, exercise.reveal_solution = FALSE, include = FALSE}
+mass_wide_again <- mass_long |>
+  pivot_wider(names_from = "year", 
+              values_from = "mean_mass")
+
+mass_wide_again
+```
+
+```{r long2wide_data-check, include = FALSE}
+grade_this_code(correct = "You will likely use this function less often, as there are only a limited number of situations where you will want the data set in the wide format. But now you how to do it!")
+```
+
+## 
+
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on importing and wrangling data in R.
