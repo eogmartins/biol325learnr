@@ -1,17 +1,16 @@
 Package: biol325learnr
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
+Title: Tutorials for BIOL 325 - Ecological Analyses based on learnr
+Version: 0.0.0.9000
 Authors@R: c(
     person(
-      "Jane", "Doe",
-      email = "jane@example.com",
+      "Eduardo", "Martins",
+      email = "eduardo.martins@unbc.ca",
       role = c("aut", "cre")
     )
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
-License: What license is it under?
+Description: This package contains a series of learnr tutorials to teach students the      basics of working in R using tidyverse packages for data import, manipulation, and     visualization and conducting data analyses.
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports:
