@@ -1,5 +1,5 @@
 ---
-title: "Importing and Wrangling Data in R"
+title: "Importing and Wrangling Data"
 output: 
   learnr::tutorial:
     progressive: true
@@ -26,7 +26,9 @@ We will use a teaching subset of the [Palmer Penguins](https://allisonhorst.gith
 
 **Data originally published in:** Gorman KB, Williams TD, Fraser WR (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus Pygoscelis). PLoS ONE 9(3):e90081. <https://doi.org/10.1371/journal.pone.0090081>
 
-We’ll work with the same data saved in three different file formats so you can practice multiple import workflows.
+Refer to the lab instructions for the **data dictionary** describing this data set and the variables included.
+
+We’ll work with the same data saved in three different file formats so you can practice multiple import workflows. 
 
 ------------------------------------------------------------------------
 
@@ -60,7 +62,7 @@ The three most common file formats you will encounter when working with ecologic
 
 ### Exercise 2.1: Importing CSV files
 
-To import CSV files, we will use the function [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) from package [readr](https://readr.tidyverse.org/index.html) (included with the tidyverse). This function reads comma-separated files into a data frame. However, the data frame produced by the function is a special one created and used by functions in the tidyverse called a [tibble](https://tibble.tidyverse.org/articles/tibble.html). A tibble still behaves and works as a data frame like you learned in the first lab, but has a nicer and more informative layout when you print it to the R console.
+To import CSV files, we will use the function [read_csv()](https://readr.tidyverse.org/reference/read_delim.html) from package [readr](https://readr.tidyverse.org/index.html) (included with the tidyverse). This function reads comma-separated files into a data frame. However, the data frame produced by the function is a special one created and used by functions in the tidyverse called a [tibble](https://tibble.tidyverse.org/articles/tibble.html). A tibble still behaves and works as a data frame like you learned in the first lab, but has a nicer and more informative layout when you print it to the R console.
 
 **Your Turn:** Replace the blanks by the data folder name (`data`) followed by the CSV file name containing the penguins data, which is called `penguins.csv` (do not forget to write the .csv extension)
 
@@ -119,7 +121,7 @@ This is because if we just type the name of the data frame we want to print in t
 
 ### Exercise 2.3: Glimpse the data frame (tibble)
 
-In the previous lab, you learned about the useful function `str()`, which will print the variable names of a data frame, followed by their type, and their inital values. The tidyverse package has a function with similar functionality, `glimpse()`, but with a cleaner output.
+In the previous lab, you learned about the useful function `str()`, which will print the variable names of a data frame, followed by their type, and their inital values. The tidyverse package has a function with similar functionality, [glimpse()](https://dplyr.tidyverse.org/reference/glimpse.html), but with a cleaner output.
 
 **Your Turn**: Replace the blanks by the name of the variable you assigned the imported data to.
 
@@ -141,7 +143,7 @@ grade_this_code(correct = "Notice how the ouput of `glimpse()` can also be usefu
 
 ### Exercise 2.4: Importing TXT files
 
-To import TXT files with values separated by tabs, we will use the function [`read_tsv()`](https://readr.tidyverse.org/reference/read_delim.html) from package [readr](https://readr.tidyverse.org/index.html) (included with the tidyverse).
+To import TXT files with values separated by tabs, we will use the function [read_tsv()](https://readr.tidyverse.org/reference/read_delim.html) from package [readr](https://readr.tidyverse.org/index.html) (included with the tidyverse).
 
 **Your Turn:** Replace the blanks so that function `read_tsv()` reads in the penguins data file with tab-separated values `penguins.txt`, and assigns it to a variable named `penguins_tsv`. Then type fill the blanks to print `penguin_tsv` to the console.
 
@@ -175,7 +177,7 @@ grade_this_code(correct = "Good work!")
 
 ### Exercise 2.5: Importing XLSX files
 
-To import XLSX files (i.e., Microsoft Excel files), we will use the function [`read_excel()`](https://readxl.tidyverse.org/reference/read_excel.html) from package [readxl](https://readxl.tidyverse.org/) (included with the tidyverse).
+To import XLSX files (i.e., Microsoft Excel files), we will use the function [read_excel()](https://readxl.tidyverse.org/reference/read_excel.html) from package [readxl](https://readxl.tidyverse.org/) (included with the tidyverse).
 
 NOTE: Excel files can have data in different **sheets**. The `read_excel()` function by default reads in data in the first sheet. You can specify which sheet to read in either by their position starting with 1 for the leftmost sheet or, better yet, by their name. This is what we use below just to show you how, but it would not be necessary for this file because it only contains one sheet.
 
@@ -235,12 +237,12 @@ Only after this do you start analyzing fish growth and comparing that between wa
 
 The tidyverse “grammar” of data wrangling (aka manipulation) is mostly implemented in the package [dplyr](dplyr%20overview:%20https://dplyr.tidyverse.org/). Here, we’ll focus on the following workhorse verbs (functions):
 
--   [`filter()`](https://dplyr.tidyverse.org/reference/filter.html): keeps rows that match conditions
--   [`select()`](https://dplyr.tidyverse.org/reference/select.html): keeps (or removes or reorders) columns
--   [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html): creates or modifies columns
--   [`rename()`](https://dplyr.tidyverse.org/reference/rename.html): renames columns
--   [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html): defines groups for grouped operations
--   [`summarise()`](https://dplyr.tidyverse.org/reference/summarise.html): reduces each group to one row of summaries
+-   [filter()](https://dplyr.tidyverse.org/reference/filter.html): keeps rows that match conditions
+-   [select()](https://dplyr.tidyverse.org/reference/select.html): keeps (or removes or reorders) columns
+-   [mutate()](https://dplyr.tidyverse.org/reference/mutate.html): creates or modifies columns
+-   [rename()](https://dplyr.tidyverse.org/reference/rename.html): renames columns
+-   [group_by()](https://dplyr.tidyverse.org/reference/group_by.html): defines groups for grouped operations
+-   [summarise()](https://dplyr.tidyverse.org/reference/summarise.html): reduces each group to one row of summaries
 
 ### 
 
@@ -305,9 +307,9 @@ summarise(
 
 ### Exercise 3.1: Filtering, grouping and summarizing data
 
-Sometimes you will want to subset or filter your data set based on values of certain variables. This can be done with function [`filter()`](https://dplyr.tidyverse.org/reference/filter.html). 
+Sometimes you will want to subset or filter your data set based on values of certain variables. This can be done with function [filter()](https://dplyr.tidyverse.org/reference/filter.html). 
 
-Also, you may want to do some computations separately for each category or group in the data set. This can be done by combining functions [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) and [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html).
+Also, you may want to do some computations separately for each category or group in the data set. This can be done by combining functions [group_by()](https://dplyr.tidyverse.org/reference/group_by.html) and [summarize()](https://dplyr.tidyverse.org/reference/summarise.html).
 
 **Your Turn:** Using the `penguins_csv` data frame you created in exercise 2.1, create a summary table (data frame) for the *Adelie* `species` and `year` *2008* that shows mean of `body_mass_g` by `island`.
 
@@ -390,7 +392,7 @@ NOTE: the `na.rm = TRUE` tells `mean()` to ignore missing values. If we don't se
 
 ### Exercise 3.2: Mutating and selecting variables
 
-You will often need to create new variables (sometimes derived from existing variables in the data frame). This can be done with function [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html). The nice thing about mutate is that you can do a series of variable transformations continuing from the variables created in the previous steps of mutate. 
+You will often need to create new variables (sometimes derived from existing variables in the data frame). This can be done with function [mutate()](https://dplyr.tidyverse.org/reference/mutate.html). The nice thing about mutate is that you can do a series of variable transformations continuing from the variables created in the previous steps of mutate. 
 
 See the example below where, using the hypothetical  data set `fish`, we first convert fish length in mm to cm. Then we create a new variable, `size class`, to categorize fish into *Small* or *Large* based on whether or not they are smaller than 18 cm. Finally we compute a new variable called `condition`. Note that the two new variables were created using the `length_cm` variable that was created in the first step of `mutate()`. This was all done by  adding each subsequent data transformation/creation within `mutate()` separated by comma.
 
@@ -404,7 +406,7 @@ fish |>
          condition = weight_g / (length_cm ^ 3))
 ```
 
-Also, you may want to select variables to keep (or drop) to have a cleaner data frame. For example, we could use [`select()`](https://dplyr.tidyverse.org/reference/select.html) to keep all variables in the `fish` data frame, except for `length_mm`, since we may prefer to work with `length_cm`. 
+Also, you may want to select variables to keep (or drop) to have a cleaner data frame. For example, we could use [select()](https://dplyr.tidyverse.org/reference/select.html) to keep all variables in the `fish` data frame, except for `length_mm`, since we may prefer to work with `length_cm`. 
 
 **Your Turn**: Using the `penguins_csv` data frame you created in exercise 2.1, create a new variable with body mass in **kg** called `body_mass_kg` from `body_mass_g` (remeber: 1 kg = 1000 g). Then keep only the variables `species`, `island`, and `body_mass_kg`.
 
@@ -500,7 +502,7 @@ In general, the long format is preferred because it matches how data are analyze
 
 ### 
 
-Keeping with the Palmer Penguins data theme, we’ll create a tiny dataset of mean body mass (g) by island and year. We we'll use the function [`tibble()`](https://tibble.tidyverse.org/reference/tibble.html) from package [`tibble`](https://tibble.tidyverse.org/) to create the new data frame.
+Keeping with the Palmer Penguins data theme, we’ll create a tiny dataset of mean body mass (g) by island and year. We we'll use the function [tibble()](https://tibble.tidyverse.org/reference/tibble.html) from package [`tibble`](https://tibble.tidyverse.org/) to create the new data frame.
 
 **Your Turn:** Just inspect the code below. Note that we need to enclose variable names made up of only numbers with the back tick symbol. After inspecting the code, press **Submit Answer**
 
@@ -534,7 +536,7 @@ Also, make sure you understand how we used the function `tibble()` to create thi
 
 ### Exercise 4.1: Wide → Long
 
-To convert a data frame from the wide to the long format, we'll use the [`pivot_longer()`](https://tidyr.tidyverse.org/reference/pivot_longer.html) function from tidyverse package [tidyr](https://tidyr.tidyverse.org/index.html). It takes several columns and collapses them into a key-value pair of variables.
+To convert a data frame from the wide to the long format, we'll use the [pivot_longer()](https://tidyr.tidyverse.org/reference/pivot_longer.html) function from tidyverse package [tidyr](https://tidyr.tidyverse.org/index.html). It takes several columns and collapses them into a key-value pair of variables.
 
 **Your Turn**: Just inspect the code below converting our `mass_wide` data frame into the long format. 
 
@@ -568,7 +570,7 @@ grade_this_code(correct = "Compare it to the wide format of this data set above.
 
 ### Exercise 4.2: Long → Wide
 
-For the last exercise, let's convert the data frame in the long format back to the wide format. We'll use the [`pivot_wider()`](https://tidyr.tidyverse.org/reference/pivot_wider.html) function from tidyverse package [tidyr](https://tidyr.tidyverse.org/index.html). It takes a key-value pair of variables and spreads it back out into multiple columns.
+For the last exercise, let's convert the data frame in the long format back to the wide format. We'll use the [pivot_wider()](https://tidyr.tidyverse.org/reference/pivot_wider.html) function from tidyverse package [tidyr](https://tidyr.tidyverse.org/index.html). It takes a key-value pair of variables and spreads it back out into multiple columns.
 
 **Your Turn**: Just inspect the code below converting our `mass_long` data frame into the wide format again. 
 
