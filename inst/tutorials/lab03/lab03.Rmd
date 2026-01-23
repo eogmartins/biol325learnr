@@ -654,6 +654,7 @@ There are a variety of ready-to-use [themes](https://ggplot2.tidyverse.org/refer
 | `theme_minimal()`  | None       | Light       | Clean, modern     |
 | `theme_classic()`  | None       | No          | Traditional plots |
 | `theme_void()`     | None       | None        | Maps, layouts     |
+| `theme_test()`     | None       | None        | Testing, debugging|
 
 **Your Turn:** Examine the code below and experiment with the available themes shown above. Click **Run Code** to see the results of changing the theme. When you're done experimenting with the code, move on to the next exercise.
 
