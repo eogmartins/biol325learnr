@@ -1,0 +1,699 @@
+---
+title: "Data Visualization"
+output:
+  learnr::tutorial:
+    progressive: true
+    allow_skip: false
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(learnr)
+library(gradethis)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+gradethis_setup()
+```
+
+## Tutorial Dataset: Palmer Penguins
+
+In the last lab, you worked with a subset of [Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/) dataset. In this lab, you will use a full version of the data set that is stored in the `data/` folder within the working directory of this tutorial.
+
+Refer to the lab instructions for the **data dictionary** describing this data set and the variables included.
+
+## 1. Loading tidyverse and reading the data
+
+**Your Turn**: Before we begin, you need to load package **tidyverse** and read in the data set **penguins.csv** into a variable we'll call **penguins**.
+
+```{r initial_setup, exercise = TRUE, exercise.eval = FALSE}
+# Load package tidyverse
+
+# Read in the data
+```
+
+```{r initial_setup-hint-1}
+# Load package tidyverse
+library(____)
+
+# Read in the data
+
+```
+
+```{r initial_setup-hint-2}
+# Load package tidyverse
+library(tidyverse)
+
+# Read in the data
+penguins <- read_csv("data/____")
+```
+
+```{r initial_setup-hint-3}
+# Load package tidyverse
+library(tidyverse)
+
+# Read in the data
+penguins <- read_csv("data/penguins.csv")
+```
+
+```{r initial_setup-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Load package tidyverse
+library(tidyverse)
+
+# Read in the data
+penguins <- read_csv("data/penguins.csv")
+```
+
+```{r initial_setup-check, include = FALSE}
+grade_this_code(correct = "Good work. We're now ready to begin using the data in the tutorial.") 
+```
+
+## 2. The ggplot2 template
+
+A ggplot usually starts with the template data + mapping + geom (values in uppercase within and including `<>` are only placeholders):
+
+``` r
+ggplot(data = <DATA>, aes(x = <X>, y = <Y>)) +
+  <GEOM_TYPE>()
+```
+
+-   `<DATA>`: A data frame (tibble) in the *long* format containing the variables to plot
+-   `<X>` and `<Y>`: The variables in <DATA> that you want to map to the x- and y-axes
+-   `<GEOM_TYPE>`: The gemoetry you want to draw (point as `geom_point`, line as `geom_line`, bar as `geom_bar`, etc)
+
+This template matters because almost every plot will at a minimum contain these elements. Any customization is just *adding another layer* as we will see. 
+
+Also note that each additional layer is added with the plus sign, `+`, at the end of a line, **not** the pipe, `|>`, that you have been using to manipulate data using functions from the `dplyr` and `tidyr` packages.
+
+> **Note**
+>
+> All mapping in ggplot2 is done with the `aes()` function, which can also be done to map variables to colour, shape, size etc. In the template above only mapping to axes is shown.
+
+### Exercise 2.1: Make your first ggplot
+
+Let's make a scatterplot of penguin **bill length** vs **flipper length**. We will use [geom_point](https://ggplot2.tidyverse.org/reference/geom_point.html) because a scatterplot is essentially a scatter of points.
+
+**YOUR TURN:** Using the template above, write the commands to produce the scatterplot of bill length (x-axis) vs flipper length (y-axis). Variables and functions you will need to use instead of the placeholders (i.e., anything within and including `<>` like `<DATA>`) in the template are: `penguins`, `bill_length_mm`, `flipper_length_mm`, and `geom_point`.
+
+```{r ex1-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+```
+
+```{r ex1-1-hint-1}
+ggplot(data = penguins, aes(x = ____, 
+                            y = ____)) +
+  geom_point()
+```
+
+```{r ex1-1-hint-2}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = ____)) +
+  geom_point()
+```
+
+```{r ex1-1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm)) +
+  geom_point()
+```
+
+```{r ex1-1-check, include = FALSE}
+grade_this_code("This is a very basic plot with no customization. There are lots we can fine tune and we'll explore some options during the tutorial.")
+```
+
+## 3. Aesthetics
+
+You can **map** a variable to an [aesthetic](https://ggplot2.tidyverse.org/articles/ggplot2-specs.html) (e.g., colour, shape, size, etc) inside `aes()` (data-driven). This will assign each different value of the mapped variable to a different asthetic (e.g. a different colour if you map a variable to asthetic `colour`). This is helpful because it lets you compare groups (e.g., species) in the same plot.
+
+Using our ggplot template, this is what we would use to map variable `<Z>` to colour (if <Z> is the variable for the penguin species, it will plot each species it find in the variable with a different colour)
+
+``` r
+ggplot(data = <DATA>, aes(x = <X>, y = <Y>, colour = <Z>)) +
+  <GEOM_TYPE>()
+```
+
+If you don't care about mapping colours to the different values of a variable `<Z>`, but want all your points to have the same colour, you will need to **set** the colour. This is done in the `<GEOM_TYPE>()` function that you will use. This how you would set the colour for a given geometry.
+
+``` r
+ggplot(data = <DATA>, aes(x = <X>, y = <Y>)) +
+  <GEOM_TYPE>(colour = <COLOUR>)
+```
+
+Make sure you notice the different between the two templates above.
+
+### Exercise 3.1: Map colour to species
+
+**YOUR TURN:** Update the scatterplot code below so that so that points are coloured by `species`.
+
+```{r ex2-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm)) +
+  geom_point()
+```
+
+```{r ex2-1-hint}
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm, 
+                     colour = ____)) +
+  geom_point()
+```
+
+```{r ex2-1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm, 
+                     colour = species)) +
+  geom_point()
+```
+
+```{r ex2-1-check, include = FALSE}
+grade_this_code("Notice how each species was assigned their own colour and a legend was added. It's possible to set your own colour scheme and the position of the legend. We'll see that later in the tutorial.")
+```
+
+### Exercise 3.2: Set colour of all points
+
+**YOUR TURN:** Update the scatterplot code below so that all points are plotted in blue, regardless of species.
+
+HINT: Some basic colours can just be provided with their names between quotation marks.
+
+```{r ex2-2, exercise=TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm)) +
+  geom_point()
+```
+
+```{r ex2-2-hint}
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm)) +
+  geom_point(colour = ____)
+```
+
+```{r ex2-2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm)) +
+  geom_point(colour = "blue")
+```
+
+```{r ex2-2-check, include = FALSE}
+grade_this_code("Good work! You can use any imaginable colour if you know its [HEX code](https://www.color-hex.com/) (a six-digit alphanumeric code preceded by #.")
+```
+
+### Exercise 3.3: Set point transparency
+
+Overplotting happens when you have a large data set, leading to lots of overlap between points that can make your scatterplot less visually appealing and in some cases not very informative. A quick fix is to **set** the value of argument `alpha` (transparency) to something between 0 and 1 (the smaller the value, the more transparent points will be).
+
+**YOUR TURN:** Update the scatterplot code below so as to set `alpha = 0.4`.
+
+```{r ex2-3, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(bill_length_mm, 
+                     flipper_length_mm, 
+                     colour = species)) +
+  geom_point()
+```
+
+```{r ex2-3-hint}
+ggplot(penguins, aes(bill_length_mm, 
+                     flipper_length_mm, 
+                     colour = species)) +
+  geom_point(alpha = ____)
+```
+
+```{r ex2-3-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(bill_length_mm, 
+                     flipper_length_mm, 
+                     colour = species)) +
+  geom_point(alpha = 0.4)
+```
+
+```{r ex2-3-check, include=FALSE}
+grade_this_code("You can see that the points look more transparent. However, the benefits of transparency are not substantial in this example, as the data set doesn't have too many overlapping points. But keep this trick in mind if you ever have a large data set to plot.")
+```
+
+## 4. Geometries
+
+In a plot, geometries encode data in a visual form, such as points, lines, bars, boxes, etc. A ggplot is not “a scatterplot” or “a bar chart” by default. It only becomes a specific type of plot when you add a geometry (or geom) layer. For example, mapping two continuous variables to the x- and y- axes does nothing visually until a geometry, such as points or lines, is specified.
+
+In this section, we will do a series of exercises that will introduce you to various useful geometries to visualize your data.
+
+### Exercise 4.1: Histograms with [geom_histogram](https://ggplot2.tidyverse.org/reference/geom_histogram.html)
+
+Histograms are useful for showing the distributional features of a continuous variable, such as shape, central tendency, and spread. See this example:
+
+```{r demo_hist, echo = TRUE, eval = FALSE}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram()
+```
+
+```{r demo_hist_run, echo = FALSE, eval = TRUE}
+library(tidyverse)
+
+penguins <- read_csv("data/penguins.csv")
+
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram()
+```
+
+The default bins are okay for quick checks, but you often want to set the arguments `bins = ...` (number of bins) **or** `binwidth = ...` (width of bins in the scale of measurement of the variable you're plotting) within `geom_histogram()`.
+
+### 
+
+**YOUR TURN**: Experiment with the number of bins in a histogram of `body_mass_g` by setting `bins` to various values between 10 and 50. After setting a value, click **Run Code** to see the result. Once you're done experimenting, set `bins = 30` and click **Submit Answer**.
+
+```{r ex4-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+```
+
+```{r ex4-1-hint-1}
+ggplot(penguins, aes(x = ____)) +
+  geom_histogram(bins = ____)
+```
+
+```{r ex4-1-hint-2}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(bins = ____)
+```
+
+```{r ex4-1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(bins = 30)
+```
+
+```{r ex4-1-check, include = FALSE}
+grade_this_code("When making your plots in ggplot, you can start with the default argument values for each geometry and then look at its help file to see what arguments you can fine tune. Then experiment with the argument values until you get a plot that you think best describe the features in the data.")
+```
+
+### 
+
+Let's fine tune the appearance of our histogram by making the individual bars look separate from one another. We'll do that by setting the arguments `fill` (to set the colour of the bars) and `colour` (to set the colour of the bar borders) within `geom_histogram()`.
+
+**YOUR TURN**: Update the histogram code below so that the bars are plotted in white and their borders are plotted in black. Feel free to experiment with other colours by using **Run Code**, but use the indicated colours when you're ready to move on and press **Submit Answer**.
+
+```{r ex4-1-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(bins = 30)
+```
+
+```{r ex4-1-1-hint-1}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(bins = 30, fill = _____)
+```
+
+```{r ex4-1-1-hint-2}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(bins = 30, fill = "white", colour = ____)
+```
+
+```{r ex4-1-1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(bins = 30, fill = "white", colour = "black")
+```
+
+```{r ex4-1-1-check, include = FALSE}
+grade_this_code("Good job! Notice that adding a distinct border to the bars can make it easier to interpret the histogram.")
+```
+
+### Exercise 4.2: Density plots with [geom_density](https://ggplot2.tidyverse.org/reference/geom_density.html)
+
+Density plots are useful for comparing distributions across groups. See the example code and output plot below. In the code, note that we map variable `species` to aesthetic `fill`, making ggplot produce a density plot for each species separately, each with their own fill colour.
+
+```{r demo-density, echo = TRUE, eval = FALSE}
+ggplot(penguins, aes(x = body_mass_g, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+
+```{r demo_density_run, echo = FALSE, eval = TRUE}
+library(tidyverse)
+
+penguins <- read_csv("data/penguins.csv")
+
+ggplot(penguins, aes(x = body_mass_g, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+
+Density estimates are a *smoothed* (i.e., continuous approximation) view of the data. The default level os smoothing is usually fine, but you can fine tune it with `adjust = ...`. In any case, always sanity-check the distribution of your data with a histogram if something looks odd in the density plot.
+
+### 
+
+**YOUR TURN**: Experiment with the level of smoothing in the density plot of penguins `body_mass_g` (by species) by setting `adjust` to various values between 0.1 and 3. After setting a value, click **Run Code** to see the result. Once you're done experimenting, set `adjust = 1` and click **Submit Answer**.
+
+```{r ex4-2, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+```
+
+```{r ex4-2-hint-1}
+ggplot(penguins, aes(x = ____, fill = ____)) +
+  geom_density(alpha = 0.5, adjust = ____)
+```
+
+```{r ex4-2-hint-2}
+ggplot(penguins, aes(x = body_mass_g, fill = species)) +
+  geom_density(alpha = 0.5, adjust = ____)
+```
+
+```{r ex4-2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = body_mass_g, fill = species)) +
+  geom_density(alpha = 0.5, adjust = 1)
+```
+
+```{r ex4-2-check, include = FALSE}
+grade_this_code("Note that the lower the value you set for `adjust`, the less smoothing is applied, leading the density plot to somewhat approximate a histogram with narrow binwidths. Values of `adjust` much higher than 1 lead to oversmoothing.")
+```
+
+### Exercise 4.3: Boxplots with [geom_boxplot](https://ggplot2.tidyverse.org/reference/geom_boxplot.html)
+
+Boxplots are a compact way to summarize and compare the distribution of a continuous variable. They are particularly useful when you want to assess the central tendency, spread, and unusual values of variable at a glance, or when comparing the same variable across treatments, species, sites, years, etc. A standard boxplot displays:
+
+-   Median: 50th quantile represented by the central line in the box
+
+-   Interquartile range (IQR): the middle 50% of the data ranging from the 25th (lower end of box) and 75th (upper end of box) quantiles
+
+-   Whiskers: the range of typical values (usually up to 1.5 × IQR)
+
+-   Outliers: observations beyond the whiskers
+
+See the example code and output plot below.
+
+```{r demo-boxplot, echo = TRUE, eval = FALSE}
+ggplot(penguins, aes(y = species, y = body_mass_g)) +
+  geom_boxplot()
+```
+
+```{r demo_boxplot_run, echo = FALSE, eval = TRUE}
+library(tidyverse)
+
+penguins <- read_csv("data/penguins.csv")
+
+ggplot(penguins, aes(x = species, y = body_mass_g)) +
+  geom_boxplot()
+```
+
+### 
+
+**YOUR TURN**: Let's make this exercise a bit more challenging by bringing in some things you learned in the previous labs. Your task is to first **filter** the `penguins` data set to remove all observations where `sex` is missing (i.e., `NA`), \***and then** pass it on to `ggplot()`to make a boxplot of `body_mass_g` by `species` (like above), but this time with the variable `sex` mapped to the aesthetic `colour` in `aes()`.
+
+```{r ex4-3, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+```
+
+```{r ex4-3-hint-1}
+filter(____, _____) |>
+ggplot(aes(x = ____, y = ____, colour = ____)) +
+  geom_boxplot()
+```
+
+```{r ex4-3-hint-2}
+filter(penguins, !is.na(sex)) |>
+ggplot(aes(x = ____, y = ____, colour = ____)) +
+  geom_boxplot()
+```
+
+```{r ex4-3-hint-3}
+filter(penguins, !is.na(sex)) |>
+ggplot(aes(x = species, y = ____, colour = ____)) +
+  geom_boxplot()
+```
+
+```{r ex4-3-hint-4}
+filter(penguins, !is.na(sex)) |>
+ggplot(aes(x = species, y = body_mass_g, colour = ____)) +
+  geom_boxplot()
+```
+
+```{r ex4-3-solution, exercise.reveal_solution = TRUE, include = FALSE}
+filter(penguins, !is.na(sex)) |>
+ggplot(aes(x = species, y = body_mass_g, colour = sex)) +
+  geom_boxplot()
+```
+
+```{r ex4-3-check, include = FALSE}
+grade_this_code("Note that the boxplot allow us to easily compare the distribution of body mass among species, while also comparing males and females within each species. By filtering out NA values, we avoided having a boxplot with a category for NA as if it were a third level of the variable sex. You can check what such a boxplot would look like by going back into the code and removing the line for  `filter()`. Then make sure to add the `penguins` data frame as the first argument to `ggplot()`. Press run code to see the plot with a NA group that you avoided by using `filter()` earlier. Once you're done, move on to the next exercise.")
+```
+
+### Exercise 4.4. Bar plots with [`geom_bar()`](https://ggplot2.tidyverse.org/reference/geom_bar.html)
+
+Bar plots are useful to display counts, totals, proportions, or summary statistics for clearly defined groups / categories. See the example code and output plot below.
+
+```{r demo-bar, echo = TRUE, eval = FALSE}
+ggplot(penguins, aes(x = island)) +
+  geom_bar()
+```
+
+```{r demo_bar_run, echo = FALSE, eval = TRUE}
+library(tidyverse)
+
+penguins <- read_csv("data/penguins.csv")
+
+ggplot(penguins, aes(x = island)) +
+  geom_bar()
+```
+
+Note that we passed only one variable, `island`, to `aes()` and mapped it to `x`. The function then counted how many observations in the dataset were associated with each island and plotted that count on the y-axis.
+
+### 
+
+**YOUR TURN**: Update the code below by mapping `species` to the aesthetic `fill`. What do you think the result will be?
+
+```{r ex4-4-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(x = island)) +
+  geom_bar()
+```
+
+```{r ex4-4-1-hint-1}
+ggplot(penguins, aes(x = island, fill = ____)) +
+  geom_bar()
+```
+
+```{r ex4-4-1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar()
+```
+
+```{r ex4-4-1-check, include = FALSE}
+grade_this_code("By mapping `species` to `fill`, we created a stacked bar plot where the count of observations by island is stratified by species. This reveals to us that either Gentoo and Chinstrap penguins were not sampled in all islands or they do not occur in some of the sampled islands (a quick internet search indicates the latter explanation is the correct one).")
+```
+
+### 
+
+What if we wanted to display the observations by species in each island as proportions instead of counts?
+
+**Your Turn:** You will do exactly what is needed to answer this question. Update the code below by setting the argument `position` in `geom_bar()` to `"fill"`.
+
+```{r ex4-4-2, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar()
+```
+
+```{r ex4-4-2-hint-1}
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar(position = ____)
+```
+
+```{r ex4-4-2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar(position = "fill")
+```
+
+```{r ex4-4-2-check, include = FALSE}
+grade_this_code("At first, you likely won't find the argument `position` very intuitive. It essentially determines how counts are 'positioned' and represented in the y-axis of the bar plot. The default value for `position` is 'stacked', which you used in the previous exercise without having to set it explicitly, since it's the default. By setting `position` to 'fill' in this exercise, you're telling ggplot that you want it to convert the counts to proportions and fill the y-axis (i.e. make bars that go from 0 to 1). Non intutively, `ggplot()` still automatically labels the y-axis as **count**, though technically it now shows a proportion.")
+```
+
+### Combining geometries
+
+Sometimes you will want to combine different geometries in the same plot. Here we will demonstrate two examples.
+
+### Exercise 4.5: Adding a linear trendline to a scatterplot
+
+When using simple linear regression (a topic we will cover later in the course), you will want to plot the two variables as a scatterplot and add the regression line. There are many ways of doing that, but ggplot has a gemotry that can do that very easily for you: `geom_smooth()` with the argument `method = "lm"`. The `lm` stands for linear model and is also the name of the base R function, `lm()` to fit simple and multiple linear regression models.
+
+**Your Turn:** Examine the code below, which you used before when learning about scatter plots, and note how we added the trend line with `geom_smooth()`. Press **Run Code** and note how the plot now shows one trend line (and confidence intervals as a band around the line) for each species.
+
+There is no code checking in this exercise, so feel free to modify the code (e.g. plot the scatterplot with and without the trend line, remove the mapping of colour by species). When you're done experimenting, move on to the next exercise.
+
+```{r ex4-5, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(bill_length_mm, 
+                     flipper_length_mm, 
+                     colour = species)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+### Exercice 4.6: Adding raw data points to a boxplot
+
+When using boxplots to summarize the distribution of values in a variable, you may still want to show the distribution of the raw data alongside the boxplot. Although you could you `geom_point()` for that, it will plot all points at the same x-value and that won't be very helpful. What we want to do is to cause some random, small displacements to each point along the x-axis to better show their distribution along the y-axis; the geometry `geom_jitter()` does exactly that.
+
+**Your Turn:** Examine the code below, which you used before when learning about boxplots. Note that we added `geom_jitter` with the arguments `width = 0.1` (to control the amount of displacement), `alpha = 0.5` (to add transparency to the points as you have seen earlier), and `colour = "blue"` (to set the points colour to blue as you have seen earlier). Press **Run Code** to see the result of combining the boxplot summary with the raw data points.
+
+There is no code checking in this exercise, so feel free to modify the code (e.g., set `width = 0` which is equivalent to using `geom_point()`, play with various levels of `width` and `alpha` or different `colours`). When you're done experimenting, move on to the next exercise.
+
+```{r ex4-6, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(penguins, aes(x = species, y = body_mass_g)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.5, colour = "blue")
+```
+
+## 5. Faceting
+
+Faceting involves plotting data within a multi-panel plot, where each panel represents a category (e.g., sex, habitat, species). This is a useful technique to compare data among many groups.
+
+### Exercise 5.1: Facet by one variable (species)
+
+When you want to facet the data by a single categorical variable, [facet_wrap()](https://ggplot2.tidyverse.org/reference/facet_wrap.html) is the function you want.
+
+**Your Turn:** Examine the code below. Note that this is the same code for the exercise combining `geom_point()` and `geom_smooth()`. However, here we don't map `species` to `colour` to produce a single plot with all three species. Instead we add the `facet_wrap()` function. Note the use of `~ species` within the function to indicate we want a panel for each species. Click **Run Code** to see the plot. Then move on to the next exercise when you're done examining the plot.
+
+```{r ex5-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ species)
+```
+
+### Exercise 5.2: Facet by two variables (species and sex)
+
+When you want to facet the data by a two categorical variables, [facet_grid()](https://ggplot2.tidyverse.org/reference/facet_grid.html) works better and allows you to choose the faceting variables that go on the multi-panel rows and columns.
+
+**Your Turn:** Examine the code below. This is similar to the code from the previous exercise, but here we first filter out observations with missing sex and use `facet_grid()` instead of `facet_wrap()`. The faceting variables you put on the left and right of `~` are represented, respectively, in the multi-panel rows and columns. Click **Run Code** to see the plot. Then move on to the next exercise when you're done examining the plot.
+
+```{r ex5-2, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+filter(penguins, !is.na(sex)) |>
+ggplot(aes(x = bill_length_mm, 
+           y = flipper_length_mm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(sex ~ species)
+```
+
+### Exercise 5.3: Change the scale of the axes
+
+By default, both `facet_wrap()` and `facet_grid()` make the x- and y-axis of all panels span the same range of values. This is the best option in most cases as it allows for straightforward, "apples-to-apples" comparison between groups.
+
+Though it can be tempting to change the scales of the axes to make the plotting area wrap tightly around the data points in each panel, this can be misleading if one doesn't pay attention to the values in the axes. Even if they do notice the different axes scales, changing the scales will make their attempt to compare groups much harder. Remember, your job is to make it easy for your audience to interpret data with visuals!
+
+**Your Turn:** In this exercise, we would like you to explore changing the scale of the x- and/or y-axis. The code below includes the argument `scales` set to `'fixed'` within `facet_wrap()`. This is the default for the function and makes all panels have the same range of values on the x- and y-axes as you saw in the last two exercises.
+
+Your task here is to look at the other options for the argument `scales` (there are three more options) in the [facet_wrap()](https://ggplot2.tidyverse.org/reference/facet_wrap.html) help file. Then experiment with these options in the code below and check the result by pressing **Run Code**. Try and notice how the different options affect your ability to compare bill and flipper lengths across species. Once you're done experimenting with the code, move on to the next exercise.
+
+```{r ex5-3, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ species, scales = "fixed")
+```
+
+## 6. Refining your plots
+
+There are almost unlimited ways of fine tuning the appearance of plots with `ggplot2`. Obviously, we can't go over them all in the tutorial. We'll cover a few most used changes you will want to do. Over time, you will learn other approaches when the need arises, typically by searching on Google or AI tools like chatGPT **how to ... in ggplot**.
+
+### Exercise 6.1 Changing the axis label
+
+To change the axis label in ggplot, you can use the function [labs()](https://ggplot2.tidyverse.org/reference/labs.html), which also allows you to add titles and captions, or their specific functions for the x- ([xlab](https://ggplot2.tidyverse.org/reference/labs.html)) and y-axis ([ylab](https://ggplot2.tidyverse.org/reference/labs.html)).
+
+**Your Turn:** Examine the codes below and notice how we used two options to change the axis labels. Feel free to experiment with your own axis labels by changing the axis text and clicking **Run Code**. When you're done experimenting with the code, move on to the next exercise.
+
+```{r ex6-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm,
+                            colour = species)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Bill length (mm)") +
+  ylab("Flipper length (mm)")
+
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm,
+                            colour = species)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Bill length (mm)", 
+       y = "Flipper length (mm)")
+```
+
+### Exercise 6.2: Changing colours
+
+To change the colour or fill of an object in a plot we use the functions [scale_colour\_\*]()(<https://ggplot2.tidyverse.org/reference/scale_colour_continuous.html>) or [scale_fill\_\*]()(<https://ggplot2.tidyverse.org/reference/scale_colour_continuous.html>), where the \* denotes different options we have available. Here, we will demonstrate the use of [scale_colour_manual()](https://ggplot2.tidyverse.org/reference/scale_manual.html) and [scale_colour_brewer()](https://ggplot2.tidyverse.org/reference/scale_brewer.html). The former allows you to specify the specific colours manually, whereas the latter allows you to use the palettes from the website [Color Brewer](https://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3).
+
+**Your Turn:** Examine the codes below and notice how we specify the colours manually. Feel free to experiment with the colours. Either spell out a common colour name or use colour hex codes (check out options on the [Color Hex](https://www.color-hex.com/) site). Then click **Run Code** to see the result. When you're done experimenting with the code, move on to the next exercise.
+
+```{r ex6-2-1, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm,
+                            colour = species)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Bill length (mm)") +
+  ylab("Flipper length (mm)") +
+  scale_colour_manual(values = c("Adelie" = "#1b9e77",
+                                 "Chinstrap" = "#d95f02",
+                                 "Gentoo" = "#7570b3"))
+```
+
+### 
+
+**Your Turn:** Now experiment with `scale_colour_brewer()`. For this function, you will provide the name of the palette you want ggplot to use. You can see the available palettes and get their names on the [Color Brewer](https://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3) website. A given palette's name can be found near an EXPORT tab following the #-class, where \# is a number. Note that the website has a checkbox that you can click to only give you colorblind safe palette options!
+
+There are ways to refine what the function uses (e.g., reverse colour order), but we will leave that for you to explore by reading the function help file. Enter different palettes in the code below and click **Run Code** to see the result. When you're done experimenting with the code, move on to the next exercise.
+
+```{r ex6-2-2, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm,
+                            colour = species)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Bill length (mm)") +
+  ylab("Flipper length (mm)") +
+  scale_colour_brewer(palette = "RdYlBu")
+```
+
+### Exercise 6.3: Changing the theme
+
+There are a variety of ready-to-use [themes](https://ggplot2.tidyverse.org/reference/ggtheme.html) included in `ggplot2` that you can use to change the non-data elements and so the appearance of your plots. Here is a table summarizing the available themes and some of their characterists and typical uses:
+
+| Theme              | Background | Grid lines  | Typical use       |
+|:-------------------|:-----------|:------------|:------------------|
+| `theme_gray()`     | Grey       | Yes         | General purpose   |
+| `theme_bw()`       | White      | Yes         | Publications      |
+| `theme_linedraw()` | White      | Yes (black) | Structure-focused |
+| `theme_light()`    | Light grey | Yes         | Soft contrast     |
+| `theme_dark()`     | Dark       | Yes         | Presentations     |
+| `theme_minimal()`  | None       | Light       | Clean, modern     |
+| `theme_classic()`  | None       | No          | Traditional plots |
+| `theme_void()`     | None       | None        | Maps, layouts     |
+
+**Your Turn:** Examine the code below and experiment with the available themes shown above. Click **Run Code** to see the results of changing the theme. When you're done experimenting with the code, move on to the next exercise.
+
+```{r ex6-3, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm,
+                            colour = species)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Bill length (mm)") +
+  ylab("Flipper length (mm)") +
+  scale_colour_brewer(palette = "RdYlBu") +
+  theme_bw()
+```
+
+### Exercise 6.4: Fine tuning the theme
+
+You can either create or your theme from scratch or start with a ready-to-use theme and refine it using the function [theme()](https://ggplot2.tidyverse.org/reference/theme.html). Here we're going to show just a few ways to change the theme starting with the ready-to-use `theme_bw()`
+
+**Your Turn:** Examine the code below and note how we fine tune a few elements of the plot's theme. Checkout the huge number of options of what you can change in the theme by examining the help file of [theme()](https://ggplot2.tidyverse.org/reference/theme.html). Experiment with some of the options by changing, removing or adding arguments to `theme()` in the code below and pressing **Run Code**. When you're done experimenting, click on **Continue** to end the tutorial.
+
+```{r ex6-4, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
+ggplot(data = penguins, aes(x = bill_length_mm, 
+                            y = flipper_length_mm,
+                            colour = species)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Bill length (mm)") +
+  ylab("Flipper length (mm)") +
+  scale_colour_brewer(palette = "RdYlBu") +
+  theme_bw() +
+  theme(legend.position = "top", # puts colour legend at the top
+        legend.title = element_blank(), # removes clour legend title
+        panel.grid = element_blank(), # removes all grids
+        axis.title = element_text(size = 16), # changes size of axis labels
+        axis.text = element_text(size = 12)) # changes size of axis values
+```
+
+###
+
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on data visualization in R and for starting Assignment # 2.
+
+
