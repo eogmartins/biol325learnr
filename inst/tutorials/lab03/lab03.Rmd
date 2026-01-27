@@ -41,10 +41,8 @@ penguins <- read_csv("data/____")
 ```
 
 ```{r initial_setup-solution, exercise.reveal_solution = TRUE, include = FALSE}
-# Load package tidyverse
 library(tidyverse)
 
-# Read in the data
 penguins <- read_csv("data/penguins.csv")
 ```
 
@@ -187,22 +185,22 @@ Overplotting happens when you have a large data set, leading to lots of overlap 
 **YOUR TURN:** Update the scatterplot code below so as to set `alpha = 0.4`.
 
 ```{r ex2-3, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
-ggplot(penguins, aes(bill_length_mm, 
-                     flipper_length_mm, 
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm, 
                      colour = species)) +
   geom_point()
 ```
 
 ```{r ex2-3-hint}
-ggplot(penguins, aes(bill_length_mm, 
-                     flipper_length_mm, 
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm, 
                      colour = species)) +
   geom_point(alpha = ____)
 ```
 
 ```{r ex2-3-solution, exercise.reveal_solution = TRUE, include = FALSE}
-ggplot(penguins, aes(bill_length_mm, 
-                     flipper_length_mm, 
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm, 
                      colour = species)) +
   geom_point(alpha = 0.4)
 ```
@@ -354,7 +352,7 @@ Boxplots are a compact way to summarize and compare the distribution of a contin
 See the example code and output plot below.
 
 ```{r demo-boxplot, echo = TRUE, eval = FALSE}
-ggplot(penguins, aes(y = species, y = body_mass_g)) +
+ggplot(penguins, aes(x = species, y = body_mass_g)) +
   geom_boxplot()
 ```
 
@@ -489,8 +487,8 @@ When using simple linear regression (a topic we will cover later in the course),
 There is no code checking in this exercise, so feel free to modify the code (e.g. plot the scatterplot with and without the trend line, remove the mapping of colour by species). When you're done experimenting, move on to the next exercise.
 
 ```{r ex4-5, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "initial_setup-solution"}
-ggplot(penguins, aes(bill_length_mm, 
-                     flipper_length_mm, 
+ggplot(penguins, aes(x = bill_length_mm, 
+                     y = flipper_length_mm, 
                      colour = species)) +
   geom_point() + 
   geom_smooth(method = "lm")
