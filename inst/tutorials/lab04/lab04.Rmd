@@ -1,0 +1,1619 @@
+---
+title: "Probability ad Probability Distributions"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(gradethis)
+library(tidyverse)
+
+tutorial_options(
+  exercise.checker = gradethis::grade_learnr,
+  exercise.timelimit = 60
+)
+
+# For teaching: show code by default
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+
+set.seed(325)
+```
+
+## 1. Introduction
+
+In this lab you will learn how to do two core tasks in R:
+
+1) Compute probabilities from common probability distributions
+2) Simulate random data from those distributions.
+
+Recall from the lecture that
+
+> A statistical model is a probabilistic representation of the
+mechanisms that produce the data (Kéry & Kellner 2024)
+
+Thus, before we can start fitting statistical models to data, it is important that we develop a good understanding of the probability distributions that represent different kinds of ecological data (presence/absence, counts, continuous traits, etc.).
+
+Each section below presents an ecological scenario that you will explore with various functions for specific probability distributions. You will be required to fill in blanks in the codes, which are represented by ____
+
+---
+
+## 2. Bernoulli distribution
+
+A **Bernoulli** random variable represents a single trial with only two possible outcomes:
+
+- 1 = success (e.g., captured, present, infected)
+- 0 = failure (e.g., escaped, absent, not infected)
+
+Symbolically, it's represented as 
+
+$$
+X \sim \text{Bernoulli}(p)
+$$
+Note that the Bernoulli distribution has a single parameter $p$, i.e. the probability of success.
+
+### 
+
+In R, there are no dedicated Bernoulli distribution functions for us to use.
+However, because it is a special case of the Binomial distribution with size 
+parameter $n = 1$, we will use functions related to the Binomial distribution
+with argument `size = 1` such as in:
+
+- `dbinom(x, size = 1, prob = p)` to compute $P(X = x|p)$ for $x = 0$ or $1$ 
+- `rbinom(n, size = 1, prob = p)` to simulate $n$ Bernoulli outcomes
+
+Here is an example of the application of these functions:
+
+```{r}
+p <- 0.25
+
+# Simulate 10 Bernoulli outcomes with p = 0.25
+rbinom(n = 10, size = 1, prob = p)
+
+# Compute P(X = 1) when p = 0.25
+dbinom(x = 1, size = 1, prob = p)  # P(success)
+
+# Compute P(X = 0) when p = 0.25
+dbinom(x = 0, size = 1, prob = p)  # P(failure)
+```
+
+### Exercise 2.1: Compute exact Bernoulli probabilities
+
+When you **know** the parameters of a distribution, you can compute the exact probability of an outcome by using its *probability mass function* (discrete random variables) or *probability density function* (continuous random variables).  Here, you will compute the exact probabilities of Bernoulli outcomes using the probability mass function of the Binomial distribution with size parameter equal 1:
+
+$$
+P(X = x | p) = p ^ {x}(1 - p)^{1-x}
+$$
+which is implemented in the R function `dbinom()`.
+
+**Your Turn:** Compute the exact probability of capture ($x = 1$) and escape ($x = 0$) for $p = 0.25$ using `dbinom()` with size parameter equal 1. 
+
+```{r ex2_1, exercise = TRUE, exercise.eval = FALSE}
+P_capture <- dbinom(x = ____, size = ____, prob = ____)
+P_escape  <- dbinom(x = ____, size = ____, prob = ____)
+
+# Do not modify the commands below
+cat("The exact probability of capture is: ", P_capture)
+cat("The exact probability of escape is: ", P_escape)
+```
+
+```{r ex2_1-hint}
+P_capture <- dbinom(x = 1, size = 1, prob = 0.25)
+P_escape  <- dbinom(x = ____, size = ____, prob = ____)
+
+# Do not modify the commands below
+cat("The exact probability of capture is: ", P_capture)
+cat("The exact probability of escape is: ", P_escape)
+```
+
+```{r ex2_1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+P_capture <- dbinom(x = 1, size = 1, prob = 0.25)
+P_escape  <- dbinom(x = 0, size = 1, prob = 0.25)
+
+# Do not modify the commands below
+cat("The exact probability of capture is: ", P_capture)
+cat("The exact probability of escape is: ", P_escape)
+```
+
+```{r ex2_1-check, include=FALSE}
+grade_this_code("In practice, you don't need to compute the exact probabilities for the two possible outcomes a Bernoulli random variable with `dbinom()`, as you can just remember that P(X = 1|p) = p and P(X = 0|p) = 1 - p.")
+```
+
+### Exercise 2.2: Simulate Bernoulli outcomes and estimate $p$
+
+In the previous exercise, you computed the probability of an outcome from a Bernoulli distribution assuming you **knew** the probability of a succesful outcome, $p$. In ecological studies, we often don't know the parameters of probability distributions that generated our data. We can only **estimate** them from the sample. 
+
+In this exercise, you will first simulate a sample from a Bernoulli probability distribution with a known per-trial probability of success $p$. Pretending you're the ecologist who collected the simulated data and that you don't know the data generating $p$, you will estimate $p$.
+
+**Your Turn:** Start by simulating 20 insect visits where the per-trial probability of capture $p = 0.25$. Then, using the sample you obtained with the simulation, **estimate** the per-trial capture probability (realized proportion captured). Since the individual outcomes from each visit are either 0 (escape) or 1 (capture), you can simply compute the mean of these outcomes to get an estimate of the per-trial capture probability.
+
+Then, repeat this process by simulating 100, 1000, and 10,000 insect visits. For any given sample size you use, click on **Run Code** five times and note that the result may change at each time. What do you notice about your estimated per-trial capture probabilities as the number of trials increase?
+
+There is no answer checking in this exercise, so feel free to experiment with other numbers of trials and probabilities if you wish.
+
+```{r ex2_2, exercise = TRUE, exercise.eval = FALSE}
+sim_captures <- rbinom(n = ____, size = 1, prob = ____)
+
+mean(____)
+```
+
+```{r ex2_2-hint-1, include = FALSE}
+sim_captures <- rbinom(n = 20, size = 1, prob = 0.25)
+
+mean(____)
+```
+
+```{r ex2_2-hint-2, include = FALSE}
+sim_captures <- rbinom(n = 20, size = 1, prob = 0.25)
+
+mean(sim_captures)
+```
+
+---
+
+## 3. Binomial distribution
+
+A Binomial random variable is used to describe the total number of successful outcomes $x$ out of $n$ **independent** Bernoulli trials with per-trial probability of success $p$.
+
+Symbolically, it's represented as 
+
+$$
+X \sim \text{Binomial}(n, p)
+$$
+
+Some examples of Binomial random variables in ecology include:
+
+- Number of occupied habitat patches out of 10
+- Number of nests that fledge out of 25
+- Number of infected individuals in a sample of 40
+
+Note that the outcome is always the count (discrete value) of one specific outcome (of two possible outcomes) out of a given sample size.
+
+###
+
+The key Binomial distribution R functions you need to remember are:
+
+- `dbinom(x, size = n, prob = p)` to compute $P(X = x|n,p)$ for $0 \le x \le n$
+- `pbinom(x, size = n, prob = p)` to compute $P(X ≤ x|n,p)$ for $0 \le x \le n$
+- `rbinom(n_sims, size = n, prob = p)` to simulate `n_sims` counts of successes
+
+You already used `dbinom()` and `rbinom()` in the previous section for the Bernoulli distribution. The only difference is that now you'll use them for size parameter > 1.
+
+The new function here is `pbinom()`: it computes cumulative probabilities, that is, the probability of observing $X \le x$ (i.e., *at most* x) for a given $n$ and $p$, where $x$ is a number of successful outcomes. For example, you could use it to calculate the probability of **6 or fewer (at most 6)** occupied habitat patches out of a total 10 patches sampled. But check the ==XXXX== section of the lab instructions on how, with a few tweaks, you can use it to calculate other probabilities (i.e., *fewer than*, *at least*, *more than*)
+
+### Exercise 3.1: Compute exact probability of outcome $x$
+
+In this exercise, you will compute the exact probabilities of Binomial outcomes using the probability mass function of the Binomial distribution with size parameter > 1. Here, the Binomial probability mass function is a bit more elaborate than the form you used for computing exact probbailities of Bernoulli outcomes. This is because now you need to account for the **many ways** you can get $x$ outcomes out of $n$ trials using a Binomial coefficient:
+
+$$
+P(X = x | p) = \binom{n}{x}p ^ {x}(1 - p)^{n-x}
+$$
+\ 
+
+Remember that the Binomial coefficient, $\binom{n}{x}$ is read *n choose x* and computed as:
+
+$$
+\binom{n}{x}=\frac{n!}{x!(n-x)!}
+$$
+To compute $P(X = x|n,p)$, function `dbinom()` does all the calculations for you in the background if you simply provide it the number of outcomes $x$, the sample size $n$, and the per-trial probability of success $p$.
+
+**Your Turn:** A fish species occurs in pools of a river with per-trial (per-pool) probability $p = 0.62$. If you sample 20 pools, what is the probability it will occur in *exactly* 15 pools?
+
+```{r ex3_1, exercise = TRUE, exercise.eval = FALSE}
+outcome_x <- ____
+
+P_x <- dbinom(x = outcome_x, size = ____, prob = ____)
+
+# Do not modify the command below
+cat(paste("The exact probability of occuring in", 
+          outcome_x, "pools is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex3_1-hint-1}
+outcome_x <- 15
+
+P_x <- dbinom(x = outcome_x, size = ____, prob = ____)
+
+# Do not modify the command below
+cat(paste("The exact probability of occuring in", 
+          outcome_x, "pools is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex3_1-hint-2}
+outcome_x <- 15
+
+P_x <- dbinom(x = outcome_x, size = 20, prob = ____)
+
+# Do not modify the command below
+cat(paste("The exact probability of occuring in", 
+          outcome_x, "pools is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex3_1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_x <- 15
+
+P_x <- dbinom(x = outcome_x, size = 20, prob = 0.62)
+
+# Do not modify the command below
+cat(paste("The exact probability of occuring in", 
+          outcome_x, "pools is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex3_1-check, include = FALSE}
+grade_this_code("These computations assume we **know** the parameters of the Binomial distribution. In practice, when we collect data that follows a Binomial distribution in ecological studies, all we know is the number of outcomes x out of samples of size n. We do not typically know the per-trial probability of success *p*, which is what we may be interested in. Later in the course, we will see how statistical models allow us to estimate *p* and quantify how it varies as a function of predictors (e.g., environmental conditions).
+
+Before you move on, feel free to experiment with the code above by changing the values of outcome_x, size, and p, and press **Run Code** to see the result.")
+```
+
+### Exercise 3.2: Compute probability of *at least* and *at most* $x$ outcomes
+
+In this exercise, you will apply the `pbinom()` function to compute the probabilities that answer the questions of *at least*, i.e., $P(X \ge q|n,p)$), and *at most*, i.e., $P(X \le q|n,p)$, $q$ outcomes. Note that we use `q` instead of `x` to refer to the number of outcomes because the `pbinom()` argument for number of outcomes is named `q` as you will see below.
+
+**Your Turn**: Once again, assume a fish species occurs in pools of a river with per-trial (per-pool) probability $p = 0.62$. If you sample 20 pools, what are the probabilities that the species will occur in **at least** 10 pools and **at most** 15 pools? 
+
+```{r ex3_2, exercise = TRUE, exercise.eval = FALSE}
+outcome_least <- ____
+
+P_least <- 1 - pbinom(q = outcome_least, size = ____, prob = ____)
+
+outcome_most <- ____
+
+P_most <- pbinom(q = outcome_most, size = ____, prob = ____)
+
+# Do not modify the command below
+cat(paste("The probability of occuring in at least", 
+          outcome_least, "pools is: ", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of occuring in at most", 
+          outcome_most, "pools is: ", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex3_2-hint-1}
+outcome_least <- 10
+
+P_least <- 1 - pbinom(q = outcome_least, size = ____, prob = ____)
+
+outcome_most <- 15
+
+P_most <- pbinom(q = outcome_most, size = ____, prob = ____)
+
+# Do not modify the command below
+cat(paste("The probability of occuring in at least", 
+          outcome_least, "pools is: ", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of occuring in at most", 
+          outcome_most, "pools is: ", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex3_2-hint-2}
+outcome_least <- 10
+
+P_least <- 1 - pbinom(q = outcome_least, size = 20, prob = ____)
+
+outcome_most <- 15
+
+P_most <- pbinom(q = outcome_most, size = 20, prob = ___)
+
+# Do not modify the command below
+cat(paste("The probability of occuring in at least", 
+          outcome_least, "pools is: ", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of occuring in at most", 
+          outcome_most, "pools is: ", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex3_2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_least <- 10
+
+P_least <- 1 - pbinom(q = outcome_least, size = 20, prob = 0.62)
+
+outcome_most <- 15
+
+P_most <- pbinom(q = outcome_most, size = 20, prob = 0.62)
+
+# Do not modify the command below
+cat(paste("The probability of occuring in at least", 
+          outcome_least, "pools is: ", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of occuring in at most", 
+          outcome_most, "pools is: ", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex3_2-check, include = FALSE}
+grade_this_code("Keep in mind that the function `pbinom(q = ...)` computes the cumulative probability of observing up to *q* outcomes, which you can interpret as **at most** *q* outcomes. So, computing its complement (i.e.,`1 - pbinom(q = ...)`), will give you the opposite interpretation (i.e., **at least** *q* outcomes).
+
+Before you move on, feel free to experiment with the code above by changing the values of outcome_least, outcome_most, size, and p, and press **Run Code** to see the result.")
+```
+
+### Exercise 3.3: Compute probability of a range of outcomes
+
+What if we want the probability that the outcome is between two values, that is, $P(x_1 \le X \le x_2|n, p)$? What we can do is calculate the cumulative probability of observing up to $x_1$ and up to $x_2$ outcomes and then compute their difference:
+$$
+P(X \le x_2|n,p) - P(X \le x_1|n,p)
+$$
+
+This is represented in the figure below showing the probability of each possible outcome $x$ from a Binomial distribution. 
+
+```{r, echo = FALSE, fig.width = 6, fig.height = 5, fig.align = "center"}
+library(tidyverse)
+n <- 20
+p <- 0.71
+q <- 0:n
+prob <- dbinom(q, size = n, prob = p)
+
+df <- tibble(q = q,
+             prob = prob,
+             le10 = q <= 10,
+             le15 = q <= 15) |>
+  mutate(region = case_when(q <= 10 ~ "x ≤ 10",
+                            q <= 15 ~ "10 < x ≤ 15",
+                            q > 15 ~ "x > 15"))
+
+y_max <- max(df$prob)
+
+ggplot(df, aes(x = q, y = prob, fill = region)) +
+  geom_col(color = "black") +
+  scale_fill_manual(
+    values = c("x ≤ 10" = "#d73027",
+               "10 < x ≤ 15"   = "#fdae61",
+               "x > 15"        = "grey80")
+    ) +
+  labs(
+    title = paste0("X ~ Binomial(n = 20, p = ", p, ")"),
+    x = "Number of successes (x)",
+    y = "P(X = x)"
+  ) +
+  geom_vline(xintercept = 10, linetype = "dashed") +
+  geom_vline(xintercept = 15, linetype = "dashed") +
+  # P(X <= 10)
+  geom_segment(x = 0, xend = 10, y = y_max * 1.15, 
+               yend = y_max * 1.15, linewidth = 1,
+               colour = "#d73027") +
+  annotate("text", x = 5, y = y_max * 1.18, 
+           label = "P(X \u2264 10)", size = 4) +
+  # P(10 <= X <= 15)
+  geom_segment(x = 10, xend = 15, y = y_max * 1.25, 
+               yend = y_max * 1.25, linewidth = 1,
+               colour = "#fdae61") +
+  annotate("text", x = 12.5, y = y_max * 1.28,
+           label = "P(10 \u2264 X \u2264 15)", size = 4) +
+  # P(X <= 15)
+  geom_segment(x = 0, xend = 10, y = y_max * 1.35, 
+               yend = y_max * 1.35, linewidth = 1,
+               colour = "#d73027") +
+  geom_segment(x = 10, xend = 15, y = y_max * 1.35, 
+               yend = y_max * 1.35, linewidth = 1,
+               colour = "#fdae61") +
+  annotate("text", x = 7.5, y = y_max * 1.38, 
+           label = "P(X \u2264 15)", size = 4) +
+  scale_y_continuous(breaks = seq(0, 0.25, 0.05),
+                     expand = expansion(mult = c(0, 0.15))) +
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+In this figure:
+
+- $P(X \le 10)$ is the sum of probabilities associated with all outcomes between 0 and 10 (i.e., all <span style="color:#d73027;">red</span> bars)
+- $P(X \le 15)$ is the sum of probabilities associated with all outcomes between 0 and 15 (i.e., all <span style="color:#d73027;">red</span> and <span style="color:#fdae61;">orange</span> bars)
+- $P(10 \le X \le 15)$ is the sum of probabilities associated with all outcomes between 10 and 15 (i.e., <span style="color:#fdae61;">orange</span> bars only). This is the same as the difference between $P(X \le 15)$ and $P(X \le 10)$, which is the approach you will use with via the `pbinom()` function below.
+
+**Your Turn**: Here you are required to compute the probability of a fish species occurring in between 10 (**lower** end of interval) and 15 (**upper** end of interval) pools of your study river, $P(10 \le X \le 15)$, under a Binomial distribution. Figure out the values you need to input in the blanks for `size` and `prob` below based on the symbolic representation of the Binomial distribution in the plot above.
+
+```{r ex3_3, exercise = TRUE, exercise.eval = FALSE}
+outcome_lower <- ____
+
+P_lower <- pbinom(q = outcome_lower, size = ____, prob = ____)
+
+outcome_upper <- ____
+
+P_upper <- pbinom(q = outcome_upper, size = ____, prob = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of occuring in between", outcome_lower, 
+          "and", outcome_upper, "pools is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex3_3-hint-1}
+outcome_lower <- 10
+
+P_lower <- pbinom(q = outcome_lower, size = ____, prob = ____)
+
+outcome_upper <- 15
+
+P_upper <- pbinom(q = outcome_upper, size = ____, prob = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of occuring in between", outcome_lower, 
+          "and", outcome_upper, "pools is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex3_3-hint-2}
+outcome_lower <- 10
+
+P_lower <- pbinom(q = outcome_lower, size = 20, prob = ____)
+
+outcome_upper <- 15
+
+P_upper <- pbinom(q = outcome_upper, size = 20, prob = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of occuring in between", outcome_lower, 
+          "and", outcome_upper, "pools is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex3_3-hint-3}
+outcome_lower <- 10
+
+P_lower <- pbinom(q = outcome_lower, size = 20, prob = 0.71)
+
+outcome_upper <- 15
+
+P_upper <- pbinom(q = outcome_upper, size = 20, prob = 0.71)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of occuring in between", outcome_lower, 
+          "and", outcome_upper, "pools is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex3_3-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_lower <- 10
+
+P_lower <- pbinom(q = outcome_lower, size = 20, prob = 0.71)
+
+outcome_upper <- 15
+
+P_upper <- pbinom(q = outcome_upper, size = 20, prob = 0.71)
+
+P_between <- P_upper - P_lower
+
+# Do not modify the command below
+cat(paste("The probability of occuring in between", outcome_lower, 
+          "and", outcome_upper, "pools is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex3_3-check, include = FALSE}
+grade_this_code("Before you move on, feel free to experiment with the code above by changing the values of outcome_lower, outcome_upper, size, and p and press **Run Code** to see the result. Keep in mind that outcome_lower must be < outcome_upper and both values have to be <= size.")
+```
+
+
+### Exercise 3.4: Simulate Binomial outcomes and estimate $p$
+
+As we did for the Bernoulli, we can simulate the outcomes of a Binomial random variable as if they represented mock ecological data and then use these data to **estimate** the probability of each possible outcome. 
+
+**Your Turn**: Suppose that in a bird population the probability of a breeding pair producing at least one fledgling chick is $p$. Let's call $p$ nest success and define it as 0.76. 
+
+To begin, assume an ecologist doesn't have enough resources to monitor a large sample of nests and can only monitor 5 nests. 
+
+Using the `rbinom()` function you learned earlier, simulate the outcome of this monitoring scenario 20 times. Then, using the simulation results, estimate the probability of each outcome as the ratio between the number of times an outcome occurs and the number of simulations. 
+
+Finally, plot this result. The blanks you're required to fill in to make the plots are related to functions and their arguments you've learned before. But there are new **tidyverse** functions written below that you should take some time to get familiarized as you examine the code. They are described in detail below the R Code box.
+
+```{r ex3_4, exercise = TRUE, exercise.eval = FALSE}
+n_sims <- ____ # number of simulations
+n_nests <- ____ # number of nests monitored
+p <- ____ # per-trial probability of nest success
+
+x_sim <- rbinom(n = ____, size = ____, prob = ____)
+
+tibble(x = ____) |>
+  count(x, name = "n_occurrences") |>
+  complete(x = 0:n_nests, 
+           fill = list(n_occurrences = 0)) |>
+  mutate(estimated_p = ____ / ____,
+         true_p = dbinom(x, size = n_nests, prob = p)) |>
+  ggplot(aes(x = ____)) +
+    geom_col(aes(y = estimated_p), 
+             fill = "gray80", colour = "black") + 
+    geom_point(aes(y = true_p), 
+               size = 2, colour = "#d73027") +
+  scale_x_continuous(breaks = 0:n_nests) +
+  scale_y_continuous(breaks = scales::breaks_width(0.1), 
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(title = paste0("X ~ Binomial(n = ", n_nests, 
+                     ", p = ", p, ")"),
+       subtitle = paste0("Number of simulations: ", n_sims),
+       x = "Number of succesful nests (x)", 
+       y = "Probability of outcome x") +
+  theme_classic()
+```
+
+```{r ex3_4-hint-1}
+n_sims <- 20 # number of simulations
+n_nests <- 5 # number of nests monitored
+p <- 0.76 # per-trial probability of nest success
+
+x_sim <- rbinom(n = ____, size = ____, prob = ____)
+
+tibble(x = ____) |>
+  count(x, name = "n_occurrences") |>
+  complete(x = 0:n_nests, 
+           fill = list(n_occurrences = 0)) |>
+  mutate(estimated_p = ____ / ____,
+         true_p = dbinom(x, size = n_nests, prob = p)) |>
+  ggplot(aes(x = ____)) +
+    geom_col(aes(y = estimated_p), 
+             fill = "gray80", colour = "black") + 
+    geom_point(aes(y = true_p), 
+               size = 2, colour = "#d73027") +
+  scale_x_continuous(breaks = 0:n_nests) +
+  scale_y_continuous(breaks = scales::breaks_width(0.1), 
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(title = paste0("X ~ Binomial(n = ", n_nests, 
+                     ", p = ", p, ")"),
+       subtitle = paste0("Number of simulations: ", n_sims),
+       x = "Number of succesful nests (x)", 
+       y = "Probability of outcome x") +
+  theme_classic()
+```
+
+```{r ex3_4-hint-2}
+n_sims <- 20 # number of simulations
+n_nests <- 5 # number of nests monitored
+p <- 0.76 # per-trial probability of nest success
+
+x_sim <- rbinom(n = n_sims, size = n_nests, prob = p)
+
+tibble(x = ____) |>
+  count(x, name = "n_occurrences") |>
+  complete(x = 0:n_nests, 
+           fill = list(n_occurrences = 0)) |>
+  mutate(estimated_p = ____ / ____,
+         true_p = dbinom(x, size = n_nests, prob = p)) |>
+  ggplot(aes(x = ____)) +
+    geom_col(aes(y = estimated_p), 
+             fill = "gray80", colour = "black") + 
+    geom_point(aes(y = true_p), 
+               size = 2, colour = "#d73027") +
+  scale_x_continuous(breaks = 0:n_nests) +
+  scale_y_continuous(breaks = scales::breaks_width(0.1), 
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(title = paste0("X ~ Binomial(n = ", n_nests, 
+                     ", p = ", p, ")"),
+       subtitle = paste0("Number of simulations: ", n_sims),
+       x = "Number of succesful nests (x)", 
+       y = "Probability of outcome x") +
+  theme_classic()
+```
+
+```{r ex3_4-hint-3}
+n_sims <- 20 # number of simulations
+n_nests <- 5 # number of nests monitored
+p <- 0.76 # per-trial probability of nest success
+
+x_sim <- rbinom(n = n_sims, size = n_nests, prob = p)
+
+tibble(x = x_sim) |>
+  count(x, name = "n_occurrences") |>
+  complete(x = 0:n_nests, 
+           fill = list(n_occurrences = 0)) |>
+  mutate(estimated_p = ____ / ____,
+         true_p = dbinom(x, size = n_nests, prob = p)) |>
+  ggplot(aes(x = ____)) +
+    geom_col(aes(y = estimated_p), 
+             fill = "gray80", colour = "black") + 
+    geom_point(aes(y = true_p), 
+               size = 2, colour = "#d73027") +
+  scale_x_continuous(breaks = 0:n_nests) +
+  scale_y_continuous(breaks = scales::breaks_width(0.1), 
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(title = paste0("X ~ Binomial(n = ", n_nests, 
+                     ", p = ", p, ")"),
+       subtitle = paste0("Number of simulations: ", n_sims),
+       x = "Number of succesful nests (x)", 
+       y = "Probability of outcome x") +
+  theme_classic()
+```
+
+```{r ex3_4-hint-4}
+n_sims <- 20 # number of simulations
+n_nests <- 5 # number of nests monitored
+p <- 0.76 # per-trial probability of nest success
+
+x_sim <- rbinom(n = n_sims, size = n_nests, prob = p)
+
+tibble(x = x_sim) |>
+  count(x, name = "n_occurrences") |>
+  complete(x = 0:n_nests, 
+           fill = list(n_occurrences = 0)) |>
+  mutate(estimated_p = n_occurrences / n_sims,
+         true_p = dbinom(x, size = n_nests, prob = p)) |>
+  ggplot(aes(x = ____)) +
+    geom_col(aes(y = estimated_p), 
+             fill = "gray80", colour = "black") + 
+    geom_point(aes(y = true_p), 
+               size = 2, colour = "#d73027") +
+  scale_x_continuous(breaks = 0:n_nests) +
+  scale_y_continuous(breaks = scales::breaks_width(0.1), 
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(title = paste0("X ~ Binomial(n = ", n_nests, 
+                     ", p = ", p, ")"),
+       subtitle = paste0("Number of simulations: ", n_sims),
+       x = "Number of succesful nests (x)", 
+       y = "Probability of outcome x") +
+  theme_classic()
+```
+
+```{r ex3_4-solution, exercise.reveal_solution = TRUE, include = FALSE}
+n_sims <- 20 # number of simulations
+n_nests <- 5 # number of nests monitored
+p <- 0.76 # per-trial probability of nest success
+
+x_sim <- rbinom(n = n_sims, size = n_nests, prob = p)
+
+tibble(x = x_sim) |>
+  count(x, name = "n_occurrences") |>
+  complete(x = 0:n_nests, 
+           fill = list(n_occurrences = 0)) |>
+  mutate(estimated_p = n_occurrences / n_sims,
+         true_p = dbinom(x, size = n_nests, prob = p)) |>
+  ggplot(aes(x = x)) +
+    geom_col(aes(y = estimated_p), 
+             fill = "gray80", colour = "black") + 
+    geom_point(aes(y = true_p), 
+               size = 2, colour = "#d73027") +
+  scale_x_continuous(breaks = 0:n_nests) +
+  scale_y_continuous(breaks = scales::breaks_width(0.1), 
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(title = paste0("X ~ Binomial(n = ", n_nests, 
+                     ", p = ", p, ")"),
+       subtitle = paste0("Number of simulations: ", n_sims),
+       x = "Number of succesful nests (x)", 
+       y = "Probability of outcome x") +
+  theme_classic()
+```
+
+New functions in the code above: 
+
+- [tibble()](https://tibble.tidyverse.org/reference/tibble.html): Builds a tibble style data frame.
+- [count()](https://dplyr.tidyverse.org/reference/count.html): Counts the number of observations of a given value (optional argument `name` allows you to give a name for the new variable holding the counts). Equivalent to using `group_by(x) |> summarize(n_occurrences = n())`, which you've learned before, but it streamlines the process for counts.
+- [complete()](https://tidyr.tidyverse.org/reference/complete.html): Completes a variable containing implicit missing values and supplies associated values to other variables in the data frame. Our simulations may not always yield all possible values of the outcome `x`. So we have to ensure that our data frame contains all possible values from 0 to `n_nests`. When turning these implicit missing outcomes into explicit outcomes in variable x, we also need to specify that their `n_occurrences = 0`, otherwise the function will use `NA`. If we didn't do use `complete()`, our plot would not represent all possible outcomes.
+- [geom_col()](https://ggplot2.tidyverse.org/reference/geom_bar.html): Equivalent to `geom_bar()` you've learned in a previous lab. However, while `geom_bar()` shows, in the y-axis, the number of observations of a given value of a variable mapped to `x`, `geom_col` shows, in the y-axis, the values of a variable mapped to `y` that are associated with values of a variable mapped to `x`
+- [scale_x_continuous()](https://ggplot2.tidyverse.org/reference/scale_continuous.html): Allows you to customize the x-axis. Here we use the argument `breaks` to specify where we want tick marks in the x-axis.
+- [scale_y_continuous()](https://ggplot2.tidyverse.org/reference/scale_continuous.html): Allows you to customize the y-axis. Here we use the argument `breaks` to specify where we want tick marks in the y-axis (see next function). We also use the argument `expand` and function [expansion()](https://ggplot2.tidyverse.org/reference/expansion.html) to remove gaps between the bottom of the bars and the x-axis (by default, ggplot "expands" the y-axis and a gap appears between the bottom of the bar and the x-axis)
+- [breaks_width()](https://scales.r-lib.org/reference/breaks_width.html): Creates equally spaced breaks (tick marks) at the specified width interval.By default, it starts at 0. This function can be useful when you want a specific break width, but doesn't know the maximum value the variable can take (e.g., when simulating data like we do here). The function is also part of the **tidyverse** ecosystem, but is included in package `scales`, which is not loaded automatically when you run `library(tidyverse)`. So if you need to use it, you have to either load it with `library(scales)` or place `scales::` before the name of its function you want to use, as we have done here (this approach can be done with functions of any package you want to use but not load).
+
+```{r ex3_4-check, include = FALSE}
+grade_this_code("Before you move on, feel free to experiment with the code above by changing the values of n_sims (increase it up to 10,000), n_nests (limit n_nests to a maximum of 20 or the plot will be messy), and p and press **Run Code** at least 5 times and examine the result each time.  What do you notice as you increase n_sims?")
+```
+
+## 4. Poisson distribution
+
+A Poisson random variable is typically used to describe counts of events in a fixed unit of space or time, but it can also describe counts associated with other sampling units as long as the unit is well defined. For example, we can use the Poisson to describe the number of offspring produced by female squirrels, where our fixed sampling unit here is a female individual. 
+
+The Poisson distribution has a single parameter, $\lambda$, known as **rate parameter** (sometimes called **mean rate** or **intensity**) describing the expected count per sampling unit. Symbolically, it's represented as 
+
+$$
+X \sim \text{Poisson}(\lambda)
+$$
+
+Some other examples of Poisson random variables in ecology include:
+
+- Number of insects captured per trap-night
+- Number of seedlings found in sampling quadrants
+- Number of fish detected per km of a stream
+
+Note that the outcome is always a non-negative (i.e., $x \ge 0$) count (discrete value), and there is no upper bound. In the examples above, we could **not** have known in advance: 
+
+- The number of insects at risk of being captured
+- The total number of seedlings that a quadrant could support
+- The total number of fish that are present in a km of the stream.
+
+If we knew these numbers, we would use a Binomial distribution to describe the counts. In these examples, all we could possibly have is the count (outcome) and the expected count per sampling unit (rate parameter), if it is known. If we didn't know the rate parameter, as is often the case in ecological studies, we would use a statistical model to estimate it and the effect of its predictors (e.g., environmental conditions).
+
+###
+
+The key Poisson distribution R functions you need to remember are:
+
+- `dpois(x, lambda = λ)` to compute $P(X = x|λ)$ for $x \ge 0$
+- `ppois(x, lambda = λ)` to compute $P(X ≤ x|λ)$ for $x \ge 0$
+- `rpois(n_sims, lambda = λ)` to simulate `n_sims` counts
+
+You already used equivalent functions for the Binomial distribution in the previous section of the tutorial. You'd use the ones for the Poisson to conduct similar tasks for a Poisson random variable.
+
+### Exercise 4.1: Compute exact probability of outcome $x$
+
+In this exercise, you will compute the exact probabilities of Poisson outcomes using the probability mass function (PMF) of the Poisson distribution:
+
+$$
+P(X = x | \lambda) = \frac{\lambda^{x} e^{-\lambda}}{x!}
+$$
+\ 
+
+Function `dpois()` implements the Poisson PMF and computes $P(X = x | \lambda)$ for you if you simply provide it the count outcome $x$ and the rate parameter $\lambda$.
+
+**Your Turn:** Suppose that, in the spring, you will survey a set of 500-m transects through Forests for the World. In each transect, you will to record the number of pileated woodpecker detected. Assuming that the species has previously been found at a rate of 2.3 individuals per 500-m transects in the forest during the spring, as indicated by previous studies in your literature review.  What is that you will get lucky and detect 6 individuals in a single transect?
+
+```{r ex4_1, exercise = TRUE, exercise.eval = FALSE}
+outcome_x <- ____
+
+P_x <- dpois(x = outcome_x, lambda = ____)
+
+# Do not modify the command below
+cat(paste("The exact probability of detecting", 
+          outcome_x, "pileated woodpecker(s) is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex4_1-hint-1}
+outcome_x <- 6
+
+P_x <- dpois(x = outcome_x, lambda = ____)
+
+# Do not modify the command below
+cat(paste("The exact probability of detecting", 
+          outcome_x, "pileated woodpecker(s) is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex4_1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_x <- 6
+
+P_x <- dpois(x = outcome_x, lambda = 2.3)
+
+# Do not modify the command below
+cat(paste("The exact probability of detecting", 
+          outcome_x, "pileated woodpecker(s) is: ", round(P_x, 2), 
+          sep = " "))
+```
+
+```{r ex4_1-check, include = FALSE}
+grade_this_code("Just like for the Binomial distribution, these computations assume we **know** the parameter (rate) of the Poisson distribution. In practice, when we collect data that follows a Poisson distribution in ecological studies, all we know is the number of outcomes x. We do not typically know rate parameter *λ*, which is what we may be interested in. Later in the course, we will see how statistical models allow us to estimate *λ* and quantify how it varies as a function of predictors (e.g., environmental conditions).
+
+Before you move on, feel free to experiment with the code above by changing the values of outcome_x and lambda, and press **Run Code** to see the result.")
+```
+
+### Exercise 4.2: Compute probability of *at least* and *at most* $x$ outcomes
+
+In this exercise, you will apply the `ppois()` function to compute the probabilities that answer the questions of *at least*, i.e., $P(X \ge q|λ)$), and *at most*, i.e., $P(X \le q|λ)$, $q$ outcomes. Just like for the Binomial equivalent function `pbinom()`, note that we use `q` instead of `x` to refer to the number of outcomes because the `ppois()` argument for number of outcomes is named `q` as you will see below.
+
+**Your Turn**: Once again, assume the expected number (rate parameter) of pileated woodpeckers in 500-m transects established in Forests for the World during the spring is 2.3. What are the probabilities that your survey will detect at least 1 and at most 5 pileated woodpeckers? 
+
+```{r ex4_2, exercise = TRUE, exercise.eval = FALSE}
+outcome_least <- ____
+
+P_least <- 1 - ppois(q = outcome_least, lambda = ____)
+
+outcome_most <- ____
+
+P_most <- ppois(q = outcome_most, lambda = ____)
+
+# Do not modify the command below
+cat(paste("The probability of detecting at least", 
+          outcome_least, "pileated woodpecker(s) is:", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of detecting at most", 
+          outcome_most, "pileated woodpecker(s) is:", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex4_2-hint-1}
+outcome_least <- 1
+
+P_least <- 1 - ppois(q = outcome_least, lambda = ____)
+
+outcome_most <- 5
+
+P_most <- ppois(q = outcome_most, lambda = ____)
+
+# Do not modify the command below
+cat(paste("The probability of detecting at least", 
+          outcome_least, "pileated woodpecker(s) is:", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of detecting at most", 
+          outcome_most, "pileated woodpecker(s) is:", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex4_2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_least <- 1
+
+P_least <- 1 - ppois(q = outcome_least, lambda = 2.3)
+
+outcome_most <- 5
+
+P_most <- ppois(q = outcome_most, lambda = 2.3)
+
+# Do not modify the command below
+cat(paste("The probability of detecting at least", 
+          outcome_least, "pileated woodpecker(s) is:", round(P_least, 2), 
+          sep = " "))
+cat(paste("The probability of detecting at most", 
+          outcome_most, "pileated woodpecker(s) is:", round(P_most, 2), 
+          sep = " "))
+```
+
+```{r ex4_2-check, include = FALSE}
+grade_this_code("Just like the Binomial equivalent function `pbinom()`, keep in mind that the function `ppois(q = ...)` computes the cumulative probability of observing up to *q* outcomes, which you can interpret as **at most** *q* outcomes. So, computing its complement (i.e.,`1 - ppois(q = ...)`), will give you the opposite interpretation (i.e., **at least** *q* outcomes).
+
+Before you move on, feel free to experiment with the code above by changing the values of outcome_least, outcome_most, and lambda, and press **Run Code** to see the result.")
+```
+
+### Exercise 4.3: Compute probability of a range of outcomes
+
+Here we will use the `ppois()` function to compute the probability of an outcome falling within a range of possible outcomes. This is done in a similar fashion to what we did with the Binomial equivalent function `pbinom()`. That is, we calculate the cumulative probability of observing up to $x_1$ and up to $x_2$ outcomes and then compute their difference:
+$$
+P(X \le x_2|\lambda) - P(X \le x_1|\lambda)
+$$
+
+This is represented in the figure below showing the probability of each possible outcome $x$ from a Poisson distribution. 
+
+```{r, echo = FALSE, fig.width = 6, fig.height = 5, fig.align = "center"}
+library(tidyverse)
+lambda <- 3.5
+max_q <- ceiling(sqrt(lambda) * 6)
+q <- 0:max_q
+prob <- dpois(q, lambda = lambda)
+
+df <- tibble(q = q,
+             prob = prob,
+             le2 = q <= 2,
+             le6 = q <= 6) |>
+  mutate(region = case_when(q <= 2 ~ "x ≤ 2",
+                            q <= 5 ~ "2 < x ≤ 5",
+                            q > 5 ~ "x > 5"))
+
+y_max <- max(df$prob)
+
+ggplot(df, aes(x = q, y = prob, fill = region)) +
+  geom_col(color = "black") +
+  scale_fill_manual(
+    values = c("x ≤ 2" = "#d73027",
+               "2 < x ≤ 5" = "#fdae61",
+               "x > 5" = "grey80")
+    ) +
+  labs(
+    title = paste0("X ~ Poisson(λ = ", lambda, ")"),
+    x = "Count (x)",
+    y = "P(X = x)"
+  ) +
+  geom_vline(xintercept = 2, linetype = "dashed") +
+  geom_vline(xintercept = 5, linetype = "dashed") +
+  # P(X <= 2)
+  geom_segment(x = 0, xend = 2, y = y_max * 1.15, 
+               yend = y_max * 1.15, linewidth = 1,
+               colour = "#d73027") +
+  annotate("text", x = 1, y = y_max * 1.18, 
+           label = "P(X \u2264 2)", size = 4) +
+  # P(2 <= X <= 5)
+  geom_segment(x = 2, xend = 5, y = y_max * 1.25, 
+               yend = y_max * 1.25, linewidth = 1,
+               colour = "#fdae61") +
+  annotate("text", x = 3.5, y = y_max * 1.28,
+           label = "P(2 \u2264 X \u2264 5)", size = 4) +
+  # P(X <= 5)
+  geom_segment(x = 0, xend = 2, y = y_max * 1.35, 
+               yend = y_max * 1.35, linewidth = 1,
+               colour = "#d73027") +
+  geom_segment(x = 2, xend = 5, y = y_max * 1.35, 
+               yend = y_max * 1.35, linewidth = 1,
+               colour = "#fdae61") +
+  annotate("text", x = 2.25, y = y_max * 1.38, 
+           label = "P(X \u2264 5)", size = 4) +
+  scale_x_continuous(breaks = 0:max_q) +
+  scale_y_continuous(breaks = scales::breaks_width(0.05),
+                  expand = expansion(mult = c(0, 0.15))) +
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+In this figure:
+
+- $P(X \le 2)$ is the sum of probabilities associated with all outcomes between 0 and 2 (i.e., all <span style="color:#d73027;">red</span> bars)
+- $P(X \le 5)$ is the sum of probabilities associated with all outcomes between 0 and 5 (i.e., all <span style="color:#d73027;">red</span> and <span style="color:#fdae61;">orange</span> bars)
+- $P(2 \le X \le 5)$ is the sum of probabilities associated with all outcomes between 2 and 5 (i.e., <span style="color:#fdae61;">orange</span> bars only). This is the same as the difference between $P(X \le 5)$ and $P(X \le 2)$, which is the approach you will use with via the `ppois()` function below.
+
+**Your Turn**: Here you are required to compute the probability of detecting between 2 (**lower** end of interval) and 5 (**upper** end of interval) pileated woodpeckers in a single 500-m transect you will survey in Forests for the World during the spring, i.e., $P(10 \le X \le 15)$, under a Poisson distribution. Figure out the values you need to input in the blanks for `lambda` below based on the symbolic representation of the Poisson distribution in the plot above.
+
+```{r ex4_3, exercise = TRUE, exercise.eval = FALSE}
+outcome_lower <- ____
+
+P_lower <- ppois(q = outcome_lower, lambda = ____)
+
+outcome_upper <- ____
+
+P_upper <- ppois(q = outcome_upper, lambda = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of detecting between", outcome_lower, 
+          "and", outcome_upper, "pileated woodpeckers is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex4_3-hint-1}
+outcome_lower <- 2
+
+P_lower <- ppois(q = outcome_lower, lambda = ____)
+
+outcome_upper <- 5
+
+P_upper <- ppois(q = outcome_upper, lambda = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of detecting between", outcome_lower, 
+          "and", outcome_upper, "pileated woodpeckers is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex4_3-hint-2}
+outcome_lower <- 2
+
+P_lower <- ppois(q = outcome_lower, lambda = 3.5)
+
+outcome_upper <- 5
+
+P_upper <- ppois(q = outcome_upper, lambda = 3.5)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of detecting between", outcome_lower, 
+          "and", outcome_upper, "pileated woodpeckers is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex4_3-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_lower <- 2
+
+P_lower <- ppois(q = outcome_lower, lambda = 3.5)
+
+outcome_upper <- 5
+
+P_upper <- ppois(q = outcome_upper, lambda = 3.5)
+
+P_between <- P_upper - P_lower
+
+# Do not modify the command below
+cat(paste("The probability of detecting between", outcome_lower, 
+          "and", outcome_upper, "pileated woodpeckers is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex4_3-check, include = FALSE}
+grade_this_code("Before you move on, feel free to experiment with the code above by changing the values of outcome_lower, outcome_upper, and lambda and press **Run Code** to see the result. Keep in mind that outcome_lower must be < outcome_upper.")
+```
+
+
+### Exercise 4.4: Simulate Poisson outcomes and estimate $\lambda$
+
+Here, we will simulate the outcomes of a Poisson random variable using `rpois()` as if they represented mock ecological data and then use these data to **estimate** the expected value and variance of the underlying Poisson distribution. Recall from the lecture that both of these values are equal to the rate parameter $\lambda$.
+
+**Your Turn**: Let's use the same pileated woodpecker scenario we have been using. This time you will simulate the number of detected woodpeckers in each of five 500-m transects surveyed in Forests for the World during the spring. We will assume the true underlying rate parameter $\lambda = 2.3$.
+
+Using the `rpois()` function , simulate the outcome of this survey scenario. Then, using the simulation results, estimate the expected value and variance as the mean of the outcomes using, respectively, functions `mean()` and `var()`.
+
+```{r ex4_4, exercise = TRUE, exercise.eval = FALSE}
+n_transects <- ____ # number of transects surveyed
+lambda <- ____ # rate parameter
+
+x_sim <- rpois(n = ____, lambda = ____)
+
+E_X <- ____(____) # expected value
+
+V_X <- ____(____) # variance
+
+# Do not modify the command below
+cat(paste("The expected value and variance of the underlying", 
+          "Poisson distribution based on a survey of", n_transects, 
+          "transects is, respectively,", round(E_X, 2), "and", 
+          round(V_X, 2), sep = " "))
+```
+
+```{r ex4_4-hint-1}
+n_transects <- 5 # number of transects surveyed
+lambda <- 2.3 # rate parameter
+
+x_sim <- rpois(n = ____, lambda = ____)
+
+E_X <- ____(____) # expected value
+
+V_X <- ____(____) # variance
+
+# Do not modify the command below
+cat(paste("The expected value and variance of the underlying", 
+          "Poisson distribution based on a survey of", n_transects, 
+          "transects is, respectively,", round(E_X, 2), "and", 
+          round(V_X, 2), sep = " "))
+```
+
+```{r ex4_4-hint-2}
+n_transects <- 5 # number of transects surveyed
+lambda <- 2.3 # rate parameter
+
+x_sim <- rpois(n = n_transects, lambda = lambda)
+
+E_X <- ____(____) # expected value
+
+V_X <- ____(____) # variance
+
+# Do not modify the command below
+cat(paste("The expected value and variance of the underlying", 
+          "Poisson distribution based on a survey of", n_transects, 
+          "transects is, respectively,", round(E_X, 2), "and", 
+          round(V_X, 2), sep = " "))
+```
+
+```{r ex4_4-hint-3}
+n_transects <- 5 # number of transects surveyed
+lambda <- 2.3 # rate parameter
+
+x_sim <- rpois(n = n_transects, lambda = lambda)
+
+E_X <- mean(____) # expected value
+
+V_X <- var(____) # variance
+
+# Do not modify the command below
+cat(paste("The expected value and variance of the underlying", 
+          "Poisson distribution based on a survey of", n_transects, 
+          "transects is, respectively,", round(E_X, 2), "and", 
+          round(V_X, 2), sep = " "))
+```
+
+```{r ex4_4-solution, exercise.reveal_solution = TRUE, include = FALSE}
+n_transects <- 5 # number of transects surveyed
+lambda <- 2.3 # rate parameter
+
+x_sim <- rpois(n = n_transects, lambda = lambda)
+
+E_X <- mean(x_sim) # expected value
+
+V_X <- var(x_sim) # variance
+
+# Do not modify the command below
+cat(paste("The expected value and variance of the underlying", 
+          "Poisson distribution based on a survey of", n_transects, 
+          "transects is, respectively,", round(E_X, 2), "and", 
+          round(V_X, 2), sep = " "))
+```
+
+```{r ex4_4-check, include = FALSE}
+grade_this_code("Before you move on, feel free to experiment with the code above by increasing the values of n_transects up to 10,000 and lambda and press **Run Code** at least 5 times and examine the result each time.  What do you notice as you increase n_transects?")
+```
+
+## 5. Normal distribution
+
+A Normal random variable is typically used to describe continuous ecological measurements, where most values are close to an average value and extreme observations are increasingly rare.
+
+The Normal distribution has two parameters: the **mean**, $\mu$, and **standard deviation**, $\sigma$. Sometimes the latter is presented as **variance**, $\sigma^2$, which is the square of standard deviation. Symbolically, the normal distribtuion is represented as:
+
+$$
+X \sim \text{Normal}(\mu, \sigma)
+$$
+
+Some examples of Normal random variables in ecology include:
+
+- The body weight of fish
+- The wing length of bats
+- The area of leaves in a shrub
+
+We can often estimate the parameters of a Normal distribution by computing the mean and standard deviation of a random sample of the variable of interest (the larger the sample, the more accurate our estimates of $\mu$ and $\sigma$). However, most of the time, we're interested in modeling $\mu$ as a function of a number of predictors (e.g., environmental conditions). This is why we need statistical models, as you will see later in the course.
+
+The key Normal distribution R functions you need to remember are:
+
+- `dnorm(x, mean = μ, sd = σ)` to compute $f(X = x|μ,σ)$ 
+- `pnorm(x, mean = μ, sd = σ)` to compute $P(X ≤ x|μ,σ)$
+- `rnorm(nsims, mean = μ, sd = σ)` to simulate `n_sims` values
+
+Note that above we indicate that `dnorm()` computes $f(x)$ (probability **density**), **not** $P(x)$ (probability). This is true of any other probability distribution for a **continuous** random variable you will encounter in your career. 
+
+The reason we compute *probability density* of a value, instead of *probability*, is that individual outcomes have probability equal zero in continuous probability distributions. To determine probability, we need to compute the integral of the probability density function over a range of outcome values (the smaller the range, the closer one can get to the probability of an outcome value of interest, but one will never get the probability of an exact outcome value).
+
+### Exercise 5.1: Compute the probability density of outcome $x$
+
+In this exercise, you will compute the probabilities density of Normal outcomes using the probability density function (PDF) of the Normal distribution:
+
+$$
+f(X = x | \mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}
+$$
+\ 
+
+Function `dnorm()` implements the Normal PDF and computes $f(X = x | \mu,\sigma)$ for you if you simply provide it the value of the measurement outcome $x$, the `mean` ($\mu$) and the `sd` ($\sigma$).
+
+**Your Turn:** Suppose that you're measuring the diameter at breast height (DBH) of birch trees around Prince George. Based on previous studies, you know the DBH of the population around town can be described by a Normal distribtuion with $\mu=25$ cm and $\sigma=6$ cm. You measured DBH from a birch tree as 21.3 cm. What is the probability density of this outcome?
+
+```{r ex5_1_1, exercise = TRUE, exercise.eval = FALSE}
+outcome_x <- ____
+
+f_x <- dnorm(x = outcome_x, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_1-hint-1}
+outcome_x <- 21.3
+
+f_x <- dnorm(x = outcome_x, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_1-hint-2}
+outcome_x <- 21.3
+
+f_x <- dnorm(x = outcome_x, mean = 25, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_1-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_x <- 21.3
+
+f_x <- dnorm(x = outcome_x, mean = 25, sd = 6)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_1-check, include = FALSE}
+grade_this_code("Again, keep in mind that function `dnorm()` returns probability **density**, not probability. Most of the time you will see the output of the function as a value between 0 and 1, but that doesn't mean it's a probability!")
+```
+
+### 
+
+**Your Turn:** Let's do an exercise to emphasize this point. Now, assume the population of birch trees in Prince George still has DBH μ = 25 cm, but their DBH does not vary much, so that σ = 0.25. What is the probability density of a measurement of 24.9 cm?
+
+```{r ex5_1_2, exercise = TRUE, exercise.eval = FALSE}
+outcome_x <- ____
+
+f_x <- dnorm(x = outcome_x, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_2-hint-1}
+outcome_x <- 24.9
+
+f_x <- dnorm(x = outcome_x, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_2-hint-2}
+outcome_x <- 24.9
+
+f_x <- dnorm(x = outcome_x, mean = 25, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_x <- 24.9
+
+f_x <- dnorm(x = outcome_x, mean = 25, sd = 0.25)
+
+# Do not modify the command below
+cat(paste("The probability density of a birch tree DBH =", 
+          outcome_x, "cm is:", round(f_x, 2), 
+          sep = " "))
+```
+
+```{r ex5_1_2-check, include = FALSE}
+grade_this_code("Take a close look at the result: it's a number > 1, so **not** a probability! 
+
+This should not surprise you anymore if you have understood that the function does not return a probability (a number between 0 and 1), but that it instead returns a probability **density** (any value ≥ 0).
+
+The very small standard deviation in this example concentrated all the probability mass around the mean, increasing the probability density in that region. In these cases, we will see probability density values > 1 if we query the function for values close to the mean.")
+```
+
+### Exercise 5.2: Compute probability of values *at least* and *at most*
+
+In this exercise, you will apply the `pnorm()` function to compute the probabilities that of values *at least*, i.e., $P(X \ge q|μ,σ)$), and *at most*, i.e., $P(X \le q|μ,σ)$ equal to $q$ . Note that we use `q` instead of `x` to refer to the outcome values because the `pnorm()` argument for a value of interest is named `q` as you will see below.
+
+**Your Turn**: Once again, assume the mean and standard deviation of DBH of the birch tree population around Prince George are, respectively, 25 cm and 6 cm. What is the probabilities that a randomly sampled tree has DBH at least 13 cm and at most 19 cm?
+
+```{r ex5_2, exercise = TRUE, exercise.eval = FALSE}
+outcome_least <- ____
+
+P_least <- 1 - pnorm(q = outcome_least, mean = ____, sd = ____)
+
+outcome_most <- ____
+
+P_most <- pnorm(q = outcome_most, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at least", outcome_least, "cm in DBH is:", 
+          round(P_least, 2), sep = " "))
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at most", outcome_most, "cm in DBH is:", 
+          round(P_most, 2), sep = " "))
+```
+
+```{r ex5_2-hint-1}
+outcome_least <- 13
+
+P_least <- 1 - pnorm(q = outcome_least, mean = ____, sd = ____)
+
+outcome_most <- 19
+
+P_most <- pnorm(q = outcome_most, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at least", outcome_least, "cm in DBH is:", 
+          round(P_least, 2), sep = " "))
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at most", outcome_most, "cm in DBH is:", 
+          round(P_most, 2), sep = " "))
+```
+
+```{r ex5_2-hint-2}
+outcome_least <- 13
+
+P_least <- 1 - pnorm(q = outcome_least, mean = 25, sd = ____)
+
+outcome_most <- 19
+
+P_most <- pnorm(q = outcome_most, mean = ____, sd = ____)
+
+# Do not modify the command below
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at least", outcome_least, "cm in DBH is:", 
+          round(P_least, 2), sep = " "))
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at most", outcome_most, "cm in DBH is:", 
+          round(P_most, 2), sep = " "))
+```
+
+```{r ex5_2-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_least <- 13
+
+P_least <- 1 - pnorm(q = outcome_least, mean = 25, sd = 6)
+
+outcome_most <- 19
+
+P_most <- pnorm(q = outcome_most, mean = 25, sd = 6)
+
+# Do not modify the command below
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at least", outcome_least, "cm in DBH is:", 
+          round(P_least, 2), sep = " "))
+cat(paste("The probability of randomly sampling a birch tree", 
+          "that is at most", outcome_most, "cm in DBH is:", 
+          round(P_most, 2), sep = " "))
+```
+
+```{r ex5_2-check, include = FALSE}
+grade_this_code("Keep in mind that the function `pnorm(q = ...)` computes the cumulative probability of a value up to `q`, which you can interpret as a value **at most** equal to `q`. So, computing its complement (i.e.,`1 - pnorm(q = ...)`), will give you the opposite interpretation (i.e., a value **at least** equal to `q`).
+
+Before you move on, feel free to experiment with the code above by changing the values of `outcome_least`, `outcome_most`, `mean`, and `sd`, and press **Run Code** to see the result.
+
+What do you notice when you enter the same measurement for both `outcome_least` and `outcome_most`?
+
+What do you notice when the values for `outcome_least` and `outcome_most` are the same distance from the mean? For example, `outcome_least` is 3 cm **above** the `mean`, whereas `outcome_most` is 3 cm **below** the `mean`?")
+```
+
+### Exercise 5.3: Compute probability of a range of outcomes
+
+Here we will use the `pnorm()` function to compute the probability of our measurements falling within a range of possible values. This is done in a similar fashion to what we did with the Binomial and Poisson equivalent functions `pbinom()` and `ppois()`. That is, we calculate the cumulative probability of observing values up to $x_1$ and up to $x_2$ and then compute their difference:
+$$
+P(X \le x_2|μ,σ) - P(X \le x_1|μ,σ)
+$$
+
+This is represented in the figure below showing the probability (area under curve) in different regions of the Normal distribution curve. 
+
+```{r, echo = FALSE, fig.width = 6, fig.height = 5, fig.align = "center"}
+library(tidyverse)
+
+# --- parameters for the Normal example ---
+mu    <- 10
+sigma <- 2
+
+# cutpoints for the regions (analogous to 2 and 5 in your Poisson example)
+a <- 8   # left cutoff
+b <- 14  # right cutoff
+
+# x-grid to approximate the density curve + shaded regions
+x_min <- mu - 4 * sigma
+x_max <- mu + 4 * sigma
+x <- seq(x_min, x_max, length.out = 2000)
+
+df <- tibble(
+  x = x,
+  dens = dnorm(x, mean = mu, sd = sigma),
+  region = case_when(
+    x <= a ~ paste0("x \u2264 ", a),
+    x <= b ~ paste0(a, " < x \u2264 ", b),
+    TRUE   ~ paste0("x > ", b)
+  )
+)
+
+y_max <- max(df$dens)
+
+ggplot(df, aes(x = x, y = dens, fill = region)) +
+  # shaded density (area under curve)
+  geom_area(color = "black", alpha = 0.95) +
+  scale_fill_manual(
+    values = setNames(
+      c("#d73027", "#fdae61", "grey80"),
+      c(paste0("x \u2264 ", a),
+        paste0(a, " < x \u2264 ", b),
+        paste0("x > ", b))
+    )
+  )+
+  labs(
+    title = paste0("X ~ Normal(\u03BC = ", mu, ", \u03C3 = ", sigma, ")"),
+    x = "Value (x)",
+    y = "Probability density, f(x)"
+  ) +
+  # cutoff lines
+  geom_vline(xintercept = a, linetype = "dashed") +
+  geom_vline(xintercept = b, linetype = "dashed") +
+  # P(X <= a)
+  geom_segment(x = x_min, xend = a, y = y_max * 1.08, yend = y_max * 1.08,
+               linewidth = 1, colour = "#d73027") +
+  annotate("text", x = (x_min + a)/2, y = y_max * 1.11,
+           label = paste0("P(X \u2264 ", a, ")"), size = 4) +
+  # P(a <= X <= b)
+  geom_segment(x = a, xend = b, y = y_max * 1.18, yend = y_max * 1.18,
+               linewidth = 1, colour = "#fdae61") +
+  annotate("text", x = (a + b)/2, y = y_max * 1.21,
+           label = paste0("P(", a, " \u2264 X \u2264 ", b, ")"), size = 4) +
+  # P(X <= b) (two colored segments, like your Poisson)
+  geom_segment(x = x_min, xend = a, y = y_max * 1.28, yend = y_max * 1.28,
+               linewidth = 1, colour = "#d73027") +
+  geom_segment(x = a, xend = b, y = y_max * 1.28, yend = y_max * 1.28,
+               linewidth = 1, colour = "#fdae61") +
+  annotate("text", x = (x_min + b)/2, y = y_max * 1.31,
+           label = paste0("P(X \u2264 ", b, ")"), size = 4) +
+  # x/y scales + space for the top annotations
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.20))) +
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+In this figure:
+
+- $P(X \le 8)$ is the probability of values $\le$ 8 (i.e., the <span style="color:#d73027;">red</span> region)
+- $P(X \le 14)$ is the probability of values $\le$ 14 (i.e., the combined <span style="color:#d73027;">red</span> and <span style="color:#fdae61;">orange</span> areas)
+- $P(8 \le X \le 14)$ is the probability of values between 8 and 14 (i.e., the <span style="color:#fdae61;">orange</span> area). This is the same as the difference between $P(X \le 14)$ and $P(X \le 8)$, which is the approach you will use with via the `pnorm()` function below.
+
+**Your Turn**: Here you are required to compute the probability of randomly sampling a birch tree whose DBH is between 8 cm (**lower** end of interval) and 14 cm (**upper** end of interval), i.e. $P(8 \le X \le 14)$, under a Normal distribution. You are restricting your measurements to trees that are about 15 years of age and whose DBH is distributed as Normal according to the figure shown above.
+
+
+```{r ex5_3, exercise = TRUE, exercise.eval = FALSE}
+outcome_lower <- ____
+
+P_lower <- pnorm(q = outcome_lower, mean = ____, sd = ____)
+
+outcome_upper <- ____
+
+P_upper <- pnorm(q = outcome_upper, mean = ____, sd = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of a randomly sampled 15-year old birch tree",
+          "having DBH between", outcome_lower, "and", outcome_upper, 
+          "cm is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex5_3-hint-1}
+outcome_lower <- 8
+
+P_lower <- pnorm(q = outcome_lower, mean = ____, sd = ____)
+
+outcome_upper <- 14
+
+P_upper <- pnorm(q = outcome_upper, mean = ____, sd = ____)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of a randomly sampled 15-year old birch tree",
+          "having DBH between", outcome_lower, "and", outcome_upper, 
+          "cm is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex5_3-hint-2}
+# Look for the values of mean and sd to use
+# by inspecting the figure above
+```
+
+```{r ex5_3-hint-3}
+outcome_lower <- 8
+
+P_lower <- pnorm(q = outcome_lower, mean = 10, sd = 2)
+
+outcome_upper <- 14
+
+P_upper <- pnorm(q = outcome_upper, mean = 10, sd = 2)
+
+P_between <- ____ - ____
+
+# Do not modify the command below
+cat(paste("The probability of a randomly sampled 15-year old birch tree",
+          "having DBH between", outcome_lower, "and", outcome_upper, 
+          "cm is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex5_3-solution, exercise.reveal_solution = TRUE, include = FALSE}
+outcome_lower <- 8
+
+P_lower <- pnorm(q = outcome_lower, mean = 10, sd = 2)
+
+outcome_upper <- 14
+
+P_upper <- pnorm(q = outcome_upper, mean = 10, sd = 2)
+
+P_between <- P_upper - P_lower
+
+# Do not modify the command below
+cat(paste("The probability of a randomly sampled 15-year old birch tree",
+          "having DBH between", outcome_lower, "and", outcome_upper, 
+          "cm is: ", round(P_between, 2), 
+          sep = " "))
+```
+
+```{r ex5_3-check, include = FALSE}
+grade_this_code("Before you move on, feel free to experiment with the code above by changing the values of `outcome_lower`, `outcome_upper`, `mean`, and `sd`, and press **Run Code** to see the result. Keep in mind that outcome_lower must be < outcome_upper.")
+```
+
+
+### Exercise 5.4: Simulate measurements from a Normal distribution
+
+Here, we will simulate the outcomes of a Normal random variable using `rnorm()` as if they represented mock ecological data and then use these data to **estimate** the mean $\mu$ and standard deviation $\sigma$ of the underlying Normal distribution. 
+
+**Your Turn**: Let's use the same birch tree DBH measurement scenario we have been using. This time you will simulate the DBH measurements from 10 randomly sampled birch trees in Forests for the World. We will assume the true underlying mean and standard deviations are  $\mu = 25$ and $\sigma = 6$.
+
+Using the `rnorm()` function , simulate the outcome of this measurement scenario. Then, using the simulation results, estimate the $\mu$ and $\sigma$ as the mean and standard deviations of the measurements using, respectively, functions `mean()` and `sd()`.
+
+```{r ex5_4, exercise = TRUE, exercise.eval = FALSE}
+n_trees <- ____ # number of trees measured
+mu <- ____ # mean parameter
+sigma <- ____ # standard deviation parameter
+
+x_sim <- rnorm(n = ____, mean = ____, sd = ____)
+
+estimated_mu <- ____(____)
+
+estimated_sigma <- ____(____)
+
+# Do not modify the command below
+cat(paste("The estimated μ and σ of the underlying", 
+          "Normal distribution that generated your DBH measurements,",
+          "based on a sample of", n_trees, "birch trees are, respectively,", 
+          round(estimated_mu, 2), "cm and", 
+          round(estimated_sigma, 2), "cm.", sep = " "))
+```
+
+```{r ex5_4-hint-1}
+n_trees <- 10 # number of trees measured
+mu <- 25 # mean parameter
+sigma <- 6 # standard deviation parameter
+
+x_sim <- rnorm(n = ____, mean = ____, sd = ____)
+
+estimated_mu <- ____(____)
+
+estimated_sigma <- ____(____)
+
+# Do not modify the command below
+cat(paste("The estimated μ and σ of the underlying", 
+          "Normal distribution that generated your DBH measurements,",
+          "based on a sample of", n_trees, "birch trees are, respectively,", 
+          round(estimated_mu, 2), "cm and", 
+          round(estimated_sigma, 2), "cm.", sep = " "))
+```
+
+```{r ex5_4-hint-2}
+n_trees <- 10 # number of trees measured
+mu <- 25 # mean parameter
+sigma <- 6 # standard deviation parameter
+
+x_sim <- rnorm(n = n_trees, mean = 25, sd = 6)
+
+estimated_mu <- ____(____)
+
+estimated_sigma <- ____(____)
+
+# Do not modify the command below
+cat(paste("The estimated μ and σ of the underlying", 
+          "Normal distribution that generated your DBH measurements,",
+          "based on a sample of", n_trees, "birch trees are, respectively,", 
+          round(estimated_mu, 2), "cm and", 
+          round(estimated_sigma, 2), "cm.", sep = " "))
+```
+
+```{r ex5_4-hint-3}
+n_trees <- 10 # number of trees measured
+mu <- 25 # mean parameter
+sigma <- 6 # standard deviation parameter
+
+x_sim <- rnorm(n = n_trees, mean = 25, sd = 6)
+
+estimated_mu <- mean(____)
+
+estimated_sigma <- sd(____)
+
+# Do not modify the command below
+cat(paste("The estimated μ and σ of the underlying", 
+          "Normal distribution that generated your DBH measurements,",
+          "based on a sample of", n_trees, "birch trees are, respectively,", 
+          round(estimated_mu, 2), "cm and", 
+          round(estimated_sigma, 2), "cm.", sep = " "))
+```
+
+```{r ex5_4-solution, exercise.reveal_solution = TRUE, include = FALSE}
+n_trees <- 10 # number of trees measured
+mu <- 25 # mean parameter
+sigma <- 6 # standard deviation parameter
+
+x_sim <- rnorm(n = n_trees, mean = 25, sd = 6)
+
+estimated_mu <- mean(x_sim)
+
+estimated_sigma <- sd(x_sim)
+
+# Do not modify the command below
+cat(paste("The estimated μ and σ of the underlying", 
+          "Normal distribution that generated your DBH measurements,",
+          "based on a sample of", n_trees, "birch trees are, respectively,", 
+          round(estimated_mu, 2), "cm and", 
+          round(estimated_sigma, 2), "cm.", sep = " "))
+```
+
+```{r ex5_4-check, include = FALSE}
+grade_this_code("Before you move on, feel free to experiment with the code above by increasing the values of n_trees up to 10,000 and press **Run Code** at least 5 times and examine the result each time. What do you notice as you increase n_trees?")
+```
+
+###
+
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on probability distributions in R and for starting Assignment # 3.
