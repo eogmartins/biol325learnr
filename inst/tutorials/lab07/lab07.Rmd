@@ -1,0 +1,1156 @@
+---
+title: "Correlation and Regression"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(gradethis)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## 1. Introduction
+
+In this lab, you will learn how to analyze associations in R using correlation, simple regression, and multiple regression. We'll work with the same data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes.
+
+## 2. Correlation
+
+### Tutorial Dataset: Nazca Booby
+
+The data you will use in this first part of the lab were collected by [Müller et al 2011](https://doi.org/10.1525/auk.2011.11008) and taken from Whitlock and Schluter's book **The Analysis of Biological Data** (2nd ed.). The data are presented in Table 16.1 of the book and represent the number of visits a chick received from an aggressive adult and a measurement of the aggressive behaviour of that chick when it became an adult. The researchers were interested in determining whether an adult's aggressive behaviour toward chicks was correlated to the frequency of aggression it experienced early in life; an outcome predicted by the [cycle of violence](https://en.wikipedia.org/wiki/Cycle_of_violence) hypothesis.
+
+In this part of today's tutorial, you will investigate the correlation between two variables. Some exercises will include partially completed code with the `____` representing blanks you have to replace with commands.
+
+### Exercise 2.1: Load tidyverse packages
+
+We will need to load the package `tidyverse` for this lab. 
+
+**Your Turn:** Write below the command to load this package.
+
+```{r cor_load_packages, exercise = TRUE, exercise.eval = FALSE}
+```
+
+```{r cor_load_packages-solution, exercise.reveal_solution = TRUE, include = FALSE}
+library(tidyverse)
+```
+
+```{r cor_load_packages-check, include = FALSE}
+grade_this_code(correct = "tidyverse package succesfully loaded!") 
+```
+
+### Exercise 2.2: Read in data the data
+
+The data are in CSV (comma-separated values) file format. We will use the `read_csv()` function to import it. The file is in the folder `data` within your working directory and is named `nazca_booby.csv`. 
+
+**Your Turn:** Write the command to import the file and assign it to a variable (i.e., data frame) named `nazca`.
+
+```{r cor_read_data, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_load_packages-solution"}
+```
+
+```{r cor_read_data-hint-1, include = FALSE}
+# Don't forget to write the full file path including 
+# the `data` directory and make sure to use the 
+# function `read_csv()`, not `read.csv()`.
+```
+
+```{r cor_read_data-hint-2, include = FALSE}
+nazca <- read_csv("data/____")
+```
+
+```{r cor_read_data-solution, exercise.reveal_solution = TRUE, include = FALSE}
+nazca <- read_csv("data/nazca_booby.csv")
+```
+
+```{r cor_read_data-check, include = FALSE}
+grade_this_code(correct = "The data have been read and assigned to `nazca`.", incorrect = "Try again!") 
+```
+
+### Exercise 2.3: Checking the imported data
+
+As you already know by now, one important first step after importing a data file is checking its contents and how R classified the variables contained in it.
+
+You already imported the `nazca_booby.csv` data file in the previous exercise and assigned it to the object `nazca`. The object is stored in your global workspace and is ready to be used.
+
+**Your Turn:** Use the `glimpse()` function to examine the structure of the `nazca` data frame.
+
+```{r cor_prepare_data, echo = FALSE, message = FALSE}
+library(tidyverse)
+nazca <- read_csv("data/nazca_booby.csv")
+```
+
+```{r cor_glimpse, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+```
+
+```{r cor_glimpse-hint, include = FALSE}
+glimpse(____)
+```
+
+```{r cor_glimpse-solution, exercise.reveal_solution = TRUE, include = FALSE}
+glimpse(nazca)
+```
+
+```{r cor_glimpse-check, include = FALSE}
+grade_this_code(correct = "Note that the function identified two variables in the data frame: `visits` and `agg_behaviour`. Both are numeric and were correctly classified as double precision (`<dbl>`), which is the default for numbers when R sees them in a data frame. When necessary, integer numeric variables can be classified as integers (`<int>`) by the user.") 
+```
+
+### Exercise 2.4: Print the data frame
+
+**Your Turn:** Print the data frame by typing the object name `nazca` and `Submit Answer`. Take a look at the printed data frame.
+
+```{r cor_print_nazca, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+```
+
+```{r cor_print_nazca-solution, exercise.reveal_solution = TRUE, include = FALSE}
+nazca
+```
+
+```{r cor_print_nazca-check, include = FALSE}
+grade_this_code(correct = "Take some time to inspect the data.") 
+```
+
+### Exercise 2.5: Print a summary of the data frame
+
+**Your Turn:** Print a summary of the data frame by using the function `summary()` and pressing `Submit Answer`.
+
+```{r cor_summarize_nazca, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+```
+
+```{r cor_summarize_nazca-hint, include = FALSE}
+summary(____)
+```
+
+```{r cor_summarize_nazca-solution, exercise.reveal_solution = TRUE, include = FALSE}
+summary(nazca)
+```
+
+```{r cor_summarize_nazca-check, include = FALSE}
+grade_this_code(correct = "Printing the summary of a data frame is a good way to check if there are any errors in the data set (e.g., a negative number in the `Min.` for `visits` would be a red flag, as visits can only be ≥ 0).
+\n
+It is also a good way to check that `read_csv()` correctly classified each variable. For example, it's common for numeric variables to be classified as factor (`<fct>`) or character (`<chr>`) if they contain a non-numeric value in at least one observation (usually introduced there by mistake).") 
+```
+
+### Exercise 2.6: Check for normality of `visits`
+
+In a subsequent exercise, we will analyze the data using Pearson correlation. One of the assumptions of Pearson correlation is that the two variables follow a bivariate Normal distribution, which implies each variable is itself normally distributed. Therefore, we will conduct the basic checks of normality for the two variables of interest: `visits` and `agg_behavior`. In this exercise, we will focus on the variable `visits`. We will:
+
+-   Create a histogram of `visits` using the `hist()` function (see [documentation](https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/hist)).
+-   Create a QQ-plot of `visits` using the functions `qqnorm()` and `qqline()` (see their [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/qqnorm))
+-   Test for normality of `visits` using the [Shapiro-Wilk test](https://en.wikipedia.org/wiki/Shapiro%E2%80%93Wilk_test) implemented in the function `shapiro.test()` (see its [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/shapiro.test)).
+
+**Your Turn:** Just examine the code below and press `Submit Answer`.
+
+```{r cor_norm_visits, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+# Create the histogram of visits
+hist(nazca$visits, xlab = "Number of aggressive visits", main = NULL)
+
+# Create a QQ-plot of visits
+qqnorm(nazca$visits) 
+qqline(nazca$visits) # adds reference line
+
+# Test normality of visits with the Shapiro-Wilk test
+shapiro.test(nazca$visits)
+```
+
+```{r cor_norm_visits-solution, exercise.reveal_solution = FALSE, include = FALSE}
+# Create the histogram of visits
+hist(nazca$visits, xlab = "Number of aggressive visits", main = NULL)
+
+# Create a QQ-plot of visits
+qqnorm(nazca$visits) 
+qqline(nazca$visits) # adds reference line
+
+# Test normality of visits with the Shapiro-Wilk test
+shapiro.test(nazca$visits)
+```
+
+```{r cor_norm_visits-check, include = FALSE}
+grade_this_code(correct = "Examine the plots. Would you conclude that the variable `visits` approximates a Normal distribution?")
+```
+
+###
+
+```{r cor_norm_visits-quiz}
+quiz(
+  question("The Shapiro-Wilk test tested the null hypothesis that the variable `visits` is normally distributed. Based on the test results shown above, you can conclude that",
+    answer("There is a high probability of observing the W statistic (or a more extreme value) if the alternative hypothesis is true, so we can conclude that the `visits` variable is not normally distributed."),
+    answer("There is a high probability of observing the W statistic (or a more extreme value) if the null hypothesis is true, so we can conclude that the `visits` variable is not normally distributed."),
+    answer("There is a high probability of observing the W statistic (or a more extreme value) if the null hypothesis is true, so we can conclude that the `visits` variable is normally distributed.", correct = TRUE),
+    answer("There is a high probability of observing the W statistic (or a more extreme value) if the null hypothesis is false, so we can conclude that the `visits` variable is not normally distributed."),
+    correct = "Well done. Just keep in mind that the test is very sensitive to minor deviations of normality, especially when you have a large sample size. Therefore, it's often better to rely on your judgment by inspecting histograms and QQ-plots of the data.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE)
+  )
+```
+
+### Exercise 2.7: Check for normality of `agg_behaviour`
+
+Now let's check normality of the variable `agg_behavior`. Use the base R functions your learned in the previous exercise to:
+
+-   Create a histogram of `agg_behaviour`.
+-   Create a QQ-plot of `agg_behaviour`.
+-   Test for normality of `agg_behaviour`.
+
+**Your Turn:** Replace the blanks with the required code. When you finish writing the code, click `Submit Answer`.
+
+```{r cor_norm_agg_behaviour, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+# Create the histogram of agg_behaviour
+____(____, xlab = "Future aggressive behaviour index", main = NULL)
+
+# Create a QQ-plot of agg_behaviour
+____(____) 
+____(____) # adds reference line
+
+# Test normality of agg_behaviour with the Shapiro-Wilk test
+____(____)
+```
+
+```{r cor_norm_agg_behaviour-hint-1, include = FALSE}
+# Create the histogram of agg_behaviour
+hist(nazca$agg_behaviour, xlab = "Future aggressive behaviour index", main = NULL)
+
+# Create a QQ-plot of agg_behaviour
+____(____) 
+____(____) # adds reference line
+
+# Test normality of agg_behaviour with the Shapiro-Wilk test
+____(____)
+```
+
+```{r cor_norm_agg_behaviour-hint-2, include = FALSE}
+# Create the histogram of agg_behaviour
+hist(nazca$agg_behaviour, xlab = "Future aggressive behaviour index", main = NULL)
+
+# Create a QQ-plot of agg_behaviour
+qqnorm(____) 
+qqline(____) # adds reference line
+
+# Test normality of agg_behaviour with the Shapiro-Wilk test
+____(____)
+```
+
+```{r cor_norm_agg_behaviour-hint-3, include = FALSE}
+# Create the histogram of agg_behaviour
+hist(nazca$agg_behaviour, xlab = "Future aggressive behaviour index", main = NULL)
+
+# Create a QQ-plot of agg_behaviour
+qqnorm(____) 
+qqline(____) # adds reference line
+
+# Test normality of agg_behaviour with the Shapiro-Wilk test
+shapiro.test(____)
+```
+
+```{r cor_norm_agg_behaviour-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Create the histogram of agg_behaviour
+hist(nazca$agg_behaviour, xlab = "Future aggressive behaviour index", main = NULL)
+
+# Create a QQ-plot of agg_behaviour
+qqnorm(nazca$agg_behaviour) 
+qqline(nazca$agg_behaviour) # adds reference line
+
+# Test normality of agg_behaviour with the Shapiro-Wilk test
+shapiro.test(nazca$agg_behaviour)
+```
+
+```{r cor_norm_agg_behaviour-check, include = FALSE}
+grade_this_code(correct = "Examine the plots. Would you conclude that the variable `agg_behaviour` approximates a Normal distribution?")
+```
+
+###
+
+```{r cor_norm_agg_behaviour-quiz}
+quiz(
+  question("The Shapiro-Wilk test tested the null hypothesis that the variable `agg_behaviour` is normally distributed. Based on the test results shown above, you can conclude that",
+    answer("There is a low probability of observing the W statistic (or a more extreme value) if the null hypothesis is true, so we can conclude that the `agg_behaviour` variable is normally distributed."),
+    answer("There is a low probability of observing the W statistic (or a more extreme value) if the alternative hypothesis is true, so we can conclude that the `agg_behaviour` variable is normally distributed."),
+    answer("There is a low probability of observing the W statistic (or a more extreme value) if the null hypothesis is false, so we can conclude that the `agg_behaviour` variable is not normally distributed."),
+    answer("There is a low probability of observing the W statistic (or a more extreme value) if the null hypothesis is true, so we can conclude that the `agg_behaviour` variable is not normally distributed.", correct = TRUE),
+    correct = "This is a case where one would typically reject the null hypothesis of normality assuming a signficance level of 0.05. However, remember that the test is very sensitive to minor deviations of normality. But the plots are not very convincing either way. This is a tricky situation to decide whether or not the variable meets the assumption of normality and you will often encounter cases like this. Given that the deviation from normality does not appear to be substantial (based on the QQ-plot) and the P-value is close to the traditional threshold of 0.05, most researchers would still go ahead and use the variable to compute the Pearson correlation coefficient (and that would be okay).",
+  allow_retry = TRUE,
+  random_answer_order = TRUE)
+  )
+```
+
+### Exercise 2.8: Visualize the association between `visits` and `agg_behaviour`
+
+**Your Turn:** Using `ggplot()`, create a scatterplot of the two variables (`visits` on the x-axis and `agg_behaviour` on the y-axis) and examine the form of the relationship.
+
+```{r cor_scatterplot_nazca, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+____(____, aes(x = ____, y = ____)) +
+  ____() + # enter the geom you would use for a scatterplot
+  ____("Number of aggressive visits") +
+  ____("Future aggressive behaviour index") +
+  theme_classic()
+```
+
+```{r cor_scatterplot_nazca-hint-1, include = FALSE}
+ggplot(nazca, aes(x = visits, y = agg_behaviour)) +
+  ____() + # enter the geom you would use for a scatterplot
+  ____("Number of aggressive visits") +
+  ____("Future aggressive behaviour index") +
+  theme_classic()
+```
+
+```{r cor_scatterplot_nazca-hint-2, include = FALSE}
+ggplot(nazca, aes(x = visits, y = agg_behaviour)) +
+  geom_point() + # enter the geom you would use for a scatterplot
+  ____("Number of aggressive visits") +
+  ____("Future aggressive behaviour index") +
+  theme_classic()
+```
+
+```{r cor_scatterplot_nazca-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(nazca, aes(x = visits, y = agg_behaviour)) +
+  geom_point() +
+  xlab("Number of aggressive visits") +
+  ylab("Future aggressive behaviour index") +
+  theme_classic()
+```
+
+```{r cor_scatterplot_nazca-check, include = FALSE}
+grade_this_code(correct = "Examine the plot. Despite the scatter, do you think there is a linear relationship between the two variables?")
+```
+
+### Exercise 2.9: Compute the Pearson correlation coefficient
+
+As we have seen in Exercise 2.7, `agg_behavior` does not seem to closely follow a Normal distribution. As small departures from normality are not usually a big deal, we can still estimate the Pearson correlation coefficient ($r$) and test the null hypothesis that it is zero. We will use the base R function `cor.test()` (see its [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor.test)) to do exactly that. 
+
+**Your Turn:** Examine the code below and click `Submit Answer`.
+
+```{r cor_pearson_nazca, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+cor.test(nazca$visits, nazca$agg_behaviour)
+```
+
+```{r cor_pearson_nazca-solution, exercise.reveal_solution = FALSE, include = FALSE}
+cor.test(nazca$visits, nazca$agg_behaviour)
+```
+
+```{r cor_pearson_nazca-check, include = FALSE}
+grade_this_code(correct = "Examine the test results and notice that R first prints the value of the *t*-statistic, degrees of freedom (df), and *P*-value related to the null hypothesis that the correlation coefficient is zero. Then it shows you the limits of the 95% confidence interval of the estimated correlation coefficient, which itself appears at the bottom of the output.")
+```
+
+### 
+
+```{r cor_pearson_nazca-quiz}
+quiz(
+  question("What is the correct interpretation of the test result you just obtained? Assume a significance level of 0.05 and a null hypothesis that the correlation coefficient equals zero.",
+    answer("The probability of the null hypothesis given the observed _t_ statistic is low. Therefore the null hypothesis can be rejected.", message = "Are we really assessing the probability of the null hypothesis?"),
+    answer("The probability of the alternative hypothesis is low given the observed _t_ statistic. Therefore the null hypothesis cannot be rejected.", message = "Are we really assessing the probability of the alternative hypothesis or any other hypothesis for that matter?"),
+    answer("The probability of observing a _t_ statistic as or more extreme than the one you got is low under the null hypothesis. Therefore the null hypothesis can be rejected.", correct = TRUE),
+    correct = "Correct! Given the observed _P_-value (i.e., low probability of observing a _t_ statistic as or more extreme than the one calculated with the data if the null hypothesis of _r_ = 0 is true), we can reject the null hypothesis that the correlation coefficient equals zero.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE)
+  )
+```
+
+### Exercise 2.10: Compute the Spearman correlation coefficient
+
+If you're not comfortable with the use of the Pearson correlation coefficient because one of the variables exhibited a small departure from normality, then you have the option of computing the Spearman correlation coefficient, which makes no parametric assumptions, but requires the relationship to be [monotonic](https://en.wikipedia.org/wiki/Monotonic_function), which it is (see scatterplot you produced in Exercise 2.8). By default, the `cor.test()` function computes the Pearson correlation coefficient. If you want it to compute the Spearman correlation coefficient, you have to set its `method` argument to `"spearman"`. Check out the `cor.test()` function [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/cor.test) to learn more about its options.
+
+**Your Turn:** Fill in the blanks below and click `Submit Answer`.
+
+```{r cor_spearman_nazca, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "cor_prepare_data"}
+____(____, ____, method = "spearman")
+```
+
+```{r cor_spearman_nazca-solution, exercise.reveal_solution = TRUE, include = FALSE}
+cor.test(nazca$visits, nazca$agg_behaviour, method = "spearman")
+```
+
+```{r cor_spearman_nazca-check, include = FALSE}
+grade_this_code(correct = "Examine the test results (ignore the warning message). Does your conclusion change when you use the Spearman correlation coefficient instead of the Pearson correlation coefficient?")
+```
+
+### 
+
+```{r cor_spearman_nazca-quiz}
+quiz(
+  question("What is the correct interpretation of the test result you just obtained? Assume a significance level of 0.05 and a null hypothesis that the correlation coefficient equals zero.",
+    answer("The probability of the null hypothesis given the observed _S_ statistic is low. Therefore the null hypothesis can be rejected.", message = "Are we really assessing the probability of the null hypothesis?"),
+    answer("The probability of observing a _S_ statistic as extreme or more as the one you got is low under the null hypothesis. Therefore the null hypothesis can be rejected.", correct = TRUE),
+    answer("The probability of the alternative hypothesis is low given the observed _S_ statistic. Therefore the null hypothesis cannot be rejected.", message = "Are we really assessing the probability of the alternative hypothesis or any other hypothesis for that matter?"),
+    correct = "Correct! Given the observed _P_-value (i.e., low probability of observing a _S_ statistic as or more extreme than the one calculated with the data if the null hypothesis of _r_(_s_) = 0 is true), we can reject the null hypothesis that the correlation coefficient equals zero.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE)
+  )
+```
+
+## 3. Simple Regression
+
+The data you will use in this second part of the lab were collected by [Johnson et al. 2019](https://doi.org/10.1002/ece3.5883) and made available via the [**lterdatasampler**](https://lter.github.io/lterdatasampler/) package. The data set contains measurements of the carapace width (size) of fiddler crabs (*Minuca pugnax*) sampled at salt marsh sites associated with the Plum Island Ecosystems (PIE), from Florida to Massachusetts, USA.
+
+The researchers were interested in testing the hypothesis that the species followed [Bergmann's rule](https://en.wikipedia.org/wiki/Bergmann%27s_rule), which states that individuals of the same species are generally larger in colder (higher latitudes) than in warmer (lower latitudes) climates.
+
+In this part of today's tutorial, you will analyze their data with simple regression. Some exercises will include partially completed code with the `____` representing blanks you have to replace with commands.
+
+### Exercise 3.1: Load required packages
+
+Let's first load all packages required for this part of the tutorial.
+
+**Your Turn:** Type below the commands to load the **lterdatasampler**, **tidyverse**, **broom,** and **nimble** packages. After you finish writing the code, click `Submit Answer`.
+
+```{r sr_load_packages, exercise = TRUE, exercise.eval = FALSE}
+
+```
+
+```{r sr_load_packages-solution, exercise.reveal_solution = TRUE, include = FALSE}
+library(lterdatasampler)
+library(tidyverse)
+library(broom)
+library(nimble)
+
+```
+
+```{r sr_load_packages-check, include = FALSE}
+grade_this_code(correct = "You're all set to start!") 
+```
+
+### Exercise 3.2: Check the data
+
+After loading the package **lterdatasampler**, a data frame with the fiddler crab data set will be automatically loaded in the R workspace. The data frame is named `pie_crab`.
+
+**Your Turn:** Check out the data by printing the `pie_crab` data frame to the console, as well as by using the functions `glimpse()` and `summary()`. After you finish writing the code, click `Submit Answer`.
+
+```{r sr_check_data-setup}
+library(lterdatasampler)
+library(tidyverse)
+library(broom)
+library(nimble)
+```
+
+```{r sr_check_data, exercise = TRUE, exercise.eval = FALSE}
+____ # Replace blanks with data frame name
+
+____(____) # Replace blanks to use glimpse() on the data frame
+
+____(____) # Replace blanks to use summary() on the data frame
+```
+
+```{r sr_check_data-hint-1, include = FALSE}
+pie_crab # Replace blanks with data frame name
+
+____(____) # Replace blanks to use glimpse() on the data frame
+
+____(____) # Replace blanks to use summary() on the data frame
+```
+
+```{r sr_check_data-hint-2, include = FALSE}
+pie_crab # Replace blanks with data frame name
+
+____(pie_crab) # Replace blanks to use glimpse() on the data frame
+
+____(pie_crab) # Replace blanks to use summary() on the data frame
+```
+
+```{r sr_check_data-solution, exercise.reveal_solution = TRUE, include = FALSE}
+pie_crab # Replace blanks with data frame name
+
+glimpse(pie_crab) # Replace blanks to use glimpse() on the data frame
+
+summary(pie_crab) # Replace blanks to use summary() on the data frame
+```
+
+```{r sr_check_data-check, include = FALSE}
+grade_this_code(correct = "Before moving on, take some time to inspect the outputs and familizarize yourself with the data set.") 
+```
+
+### Exercise 3.3: Visualizing the association betwen `size` and `latitude`
+
+As usual, it's a good idea to also explore the data with visualizations before any analysis is conducted. Since you're dealing with two numeric (continuous) variables, a scatterplot is a good choice. By convention, we plot the **response** variable of interest (`size`) on the y-axis.
+
+**Your Turn:** Using `ggplot()`, create a scatterplot of the two variables (`latitude` on the x-axis and `size` on the y-axis) and examine the form of the relationship.
+
+```{r sr_scatterplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "sr_check_data-setup"}
+____(____, aes(x = ____, y = ____)) +
+  ____() + # enter the geom you would use for a scatterplot
+  ____("Latitude (°N)") +
+  ____("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(30, 42, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+```{r sr_scatterplot-hint-1, include = FALSE}
+ggplot(pie_crab, aes(x = latitude, y = size)) +
+  ____() + # enter the geom you would use for a scatterplot
+  ____("Latitude (°N)") +
+  ____("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(30, 42, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+```{r sr_scatterplot-hint-2, include = FALSE}
+ggplot(pie_crab, aes(x = latitude, y = size)) +
+  geom_point() + # enter the geom you would use for a scatterplot
+  ____("Latitude (°N)") +
+  ____("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(30, 42, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+```{r sr_scatterplot-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(pie_crab, aes(x = latitude, y = size)) +
+  geom_point() + # enter the geom you would use for a scatterplot
+  xlab("Latitude (°N)") +
+  ylab("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(30, 42, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+```{r sr_scatterplot-check, include = FALSE}
+grade_this_code(correct = "Examine the plot and note the positive relationship between the fiddler crab carapace width and latitude. Does it show an approximately linear relationship?")
+```
+
+### Exercise 3.4: Fitting the simple regression model
+
+In this exercise you will use the R function `lm()` to conduct a regression analysis of the fiddler crab data set. The function name stands for **linear model**. You can learn more about the function by checking out  [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/lm). 
+The function uses R's formula notation, `y ~ x`, where the variable on the left side of `~` (read this tilde symbol as: *is modeled as a function of* ) is the response variable (i.e., `y`) and the one on the right side is the explanatory (or predictor) variable (i.e., `x`). 
+
+In our exercise, the response variable will be `size` and the explanatory variable will be `latitude`. We will ask R to store the results of the analysis into the object `sr_mod_lat`.
+
+**Your Turn:** Examine the code below, fill in the blanks for the variables we need to use in the regression (`size` and `latitude`) and the name of the data frame (`pie_crab`) where R can find them. Then click `Submit Answer`.
+
+```{r sr_fit_model, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "sr_check_data-setup"}
+sr_mod_lat <- lm(____ ~ ____, data = ____)
+```
+
+```{r sr_fit_model-hint-1, include = FALSE}
+sr_mod_lat <- lm(size ~ ____, data = ____)
+```
+
+```{r sr_fit_model-hint-2, include = FALSE}
+sr_mod_lat <- lm(size ~ latitude, data = ____)
+```
+
+```{r sr_fit_model-solution, exercise.reveal_solution = TRUE, include = FALSE}
+sr_mod_lat <- lm(size ~ latitude, data = pie_crab)
+```
+
+```{r sr_fit_model-check, include = FALSE}
+grade_this_code(correct = "The simple regression model has been succesfuly fit to the data! We won't look at the model estimates just yet. First, we need to use the output from `lm()` to check that the model assumptions were met.")
+```
+
+### Exercise 3.5: Check assumptions of the simple regression model
+
+Before we take a closer look at the estimates of the regression parameters and proceed with making conclusions based on null hypothesis testing, we need to check if the data met the assumptions of the regression model. We already created a scatterplot of `size` and `latitude`, which revealed an approximately linear relationship between the two variables. We will now assess two other important assumptions of the regression model: that the **residual variance is constant** and that the **residuals are normally distributed**.
+
+To check that the residual variance is approximately constant, we will create a plot of fitted (expected) values (x-axis) and residuals (y-axis). The same plot can also be used to assess the assumption that the relationship between variables is linear (as we did with some examples in the lecture).
+
+To check for normality of residuals, we will create a histogram and QQ-plot of residuals as well as use the Shapiro-Wilk test, as we did earlier in the tutorial for correlation. But this time we're making this assessment on the **residuals**, not on the response variable. Always keep this in mind. That the assessment of normality is based on residuals, rather than the response variable, will become increasingly important as we add more predictors to the model (i.e. use multiple regression).
+
+Here, we will use base R plotting functions so you can focus on checking assumptions, rather than creating nice plots with **ggplot2**. A couple important functions you will use are:
+
+- `fitted()`: function to extract the fitted (expected or predicted) values for each observation in the data set (see its [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/fitted))
+- `residuals()`: function to extract the residual values for each observation in the data set (see its [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/residuals))
+
+**Your Turn:** Examine the code below, fill in the blanks for commands you have already used in earlier exercises, and click `Submit Answer`.
+
+```{r sr_fit_model-setup}
+library(lterdatasampler)
+library(tidyverse)
+library(broom)
+library(nimble)
+
+sr_mod_lat <- lm(size ~ latitude, data = pie_crab)
+```
+
+```{r sr_check_assumptions, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "sr_fit_model-setup"}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(sr_mod_lat) # extract fitted values
+res_vals <- residuals(sr_mod_lat) # extract residuals
+
+# Plot fitted vs residuals
+plot(fit_vals, res_vals, xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, lty = "dashed")
+
+# Create the histogram of residuals
+____(____, xlab = "Residuals", main = NULL)
+
+# Create a QQ-plot of residuals
+____(____) # make scatterplot of residual quantiles
+____(____) # add reference line
+
+# Test normality of residuals with the Shapiro-Wilk test
+____(____)
+```
+
+```{r sr_check_assumptions-hint, include = TRUE}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(sr_mod_lat) # extract fitted values
+res_vals <- residuals(sr_mod_lat) # extract residuals
+
+# Plot fitted vs residuals
+plot(fit_vals, res_vals, xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, lty = "dashed")
+
+# Create the histogram of residuals
+hist(res_vals, xlab = "Residuals", main = NULL)
+```
+
+```{r sr_check_assumptions-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(sr_mod_lat) # extract fitted values
+res_vals <- residuals(sr_mod_lat) # extract residuals
+
+# Plot fitted vs residuals
+plot(fit_vals, res_vals, xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, lty = "dashed")
+
+# Create the histogram of residuals
+hist(res_vals, xlab = "Residuals", main = NULL)
+
+# Create a QQ-plot of residuals
+qqnorm(res_vals) # make scatterplot of residual quantiles
+qqline(res_vals) # add reference line
+
+# Test normality of residuals with the Shapiro-Wilk test
+shapiro.test(res_vals)
+```
+
+```{r sr_check_assumptions-check, include = FALSE}
+grade_this_code(correct = "Make sure you examine the plots and the Shapiro-Wilk test result. Would you conclude that the assumptions of the simple regression model were met?")
+```
+
+### Exercise 3.6: Interpreting the regression output
+
+After checking and concluding that the assumptions of simple regression were not strongly violated, we can proceed to interpret the regression output. We'll do that with `summary()` and `tidy()` (the latter is from package `broom`, check out its [documentation](https://www.rdocumentation.org/packages/broom/versions/1.0.4)). 
+
+Function `tidy()` just organizes the model estimates and associated statistics in a tibble (data frame), which makes it easier on our eyes and to manipulate (great for extracting the estimates and statistics or making a nice table in a Quarto document!)
+
+**Your Turn:** Fill in the blanks below to inspect the model fit output (`sr_mod_lat`) with `summary()` and `tidy()` and click `Submit Answer`.
+
+```{r sr_interpreting_output, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "sr_fit_model-setup"}
+____(____) # Use summary()
+
+____(____) # Use tidy()
+```
+
+```{r sr_interpreting_output-hint, include = FALSE}
+summary(____) # Use summary()
+
+tidy(____) # Use tidy()
+```
+
+```{r sr_interpreting_output-solution, exercise.reveal_solution = TRUE, include = FALSE}
+summary(sr_mod_lat) # Use summary()
+
+tidy(sr_mod_lat) # Use tidy()
+```
+
+```{r sr_interpreting_output-check, include = FALSE}
+grade_this_code(correct = "Examine what is printed above. The output of the function `summary()` (in the top box) has a lot of information, including a summary of the residuals, estimates of the intercept and slope with associated test statistics, the residual standard error, and the coefficient of determination R2 (Multiple R-squared). The output of `tidy()` (in the bottom box) will only show you the estimates of the intercept and slope and related statistics.")
+```
+
+### 
+
+```{r sr_interpreting_output-quiz}
+quiz(
+  question("What is the correct interpretation of the slope and associated _t_-test for slope you just obtained? Assume a significance level of 0.05 and a null hypothesis that the slope is zero. ",
+    answer("Carapace width changes by -3.62 mm for every 0.1 °N change in latitude. The probability of observing a _t_ statistic as or more extreme than the one you got is low under the null hypothesis. Therefore the null hypothesis of the slope being zero can be rejected.", 
+           message = "Are you sure you're looking at the coefficient estimate for slope? Also, review your lecture notes for the definition of the slope of a linear model."),
+    answer("Carapace width increases by 0.3484 mm for every 1 °N change in latitude. The probability of the null hypothesis given the observed _t_ statistic is low. Therefore the null hypothesis of the slope being zero can be rejected.",
+           message = "Are you sure you're looking at the coefficient estimate for slope? Are we really assessing the probability of the null hypothesis?"),
+    answer("Carapace width increases 0.485 mm for every 1 °N increase in latitude. The probability of observing a _t_ statistic as or more extreme than the one you got is low under the null hypothesis. Therefore the null hypothesis of the slope being zero can be rejected.", correct = TRUE),
+    correct = "Correct! The slope measures the change in the response variable for every _unit_ change in the explanatory variable. Given the observed _P_-value for the slope (i.e., low probability of observing a _t_ statistic as or more extreme than the one calculated with the data if the null hypothesis of the slope being zero were true), we can reject the null hypothesis that the slope equals zero.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+  ),
+
+  question("How much much of the variability in carapace width was explained by latitude?",
+    answer("Latitude explained 48.51% of the variability in carapace width.", 
+           message = "Are you sure you're looking at the right statistic?"),
+    answer("Latitude explained 34.67% of the variability in carapace width.", 
+           message = "Looks like you based this on Adjusted R-squared. This cannot be interpreted in terms of variance explained."),
+    answer("Latitude explained 34.84% of the variability in carapace width.", correct = TRUE),
+    correct = "Correct!",
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+  )
+)
+```
+
+### Exercise 3.7: Adding the regression line to a scatterplot
+
+We often want to overlay the regression line on top of a scatterplot showing the relationship between the explanatory and response variables. A simple and quick way of doing this is by adding the `geom_smooth()` with `method = "lm"` to your plot made with `ggplot()` in Exercise 3.3.
+
+**Your Turn:** Examine the code below and note that it's mostly the same than the one you used to create the scatterplot in Exercise 3.3, but it now includes `geom_smooth()` to add the fitted line of a regression estimated with `lm()`. Then, click `Submit Answer`.
+
+```{r sr_add_fitted_line, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "sr_fit_model-setup"}
+ggplot(pie_crab, aes(x = latitude, y = size)) +
+  geom_point() + # enter the geom you would use for a scatterplot
+  geom_smooth(method = "lm") + # add regression line
+  xlab("Latitude (°N)") +
+  ylab("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(30, 42, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+```{r sr_add_fitted_line-solution, exercise.reveal_solution = FALSE, include = FALSE}
+ggplot(pie_crab, aes(x = latitude, y = size)) +
+  geom_point() + # enter the geom you would use for a scatterplot
+  geom_smooth(method = "lm") + # add regression line
+  xlab("Latitude (°N)") +
+  ylab("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(30, 42, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+```{r sr_add_fitted_line-check, include = FALSE}
+grade_this_code(correct = "Examine the plot and notice that `geom_smooth()` also added a ribbon, which by default is the 95% confidence interval of the fitted (expected) values of the response (`size`) represented by the regression line.")
+```
+
+## 4. Multiple Regression
+
+In this last part of the lab, you will continue using the fiddler crab caparace width (size) data collected by [Johnson et al. 2019](https://doi.org/10.1002/ece3.5883) and made available via the [**lterdatasampler**](https://lter.github.io/lterdatasampler/) package. 
+
+You will reproduce the second part of their analysis, where they tested the hypotheses that the latitudinal gradient in fiddler crab size is related to mean annual temperature (*temperature-size hypothesis*) and standard deviation of temperature (*seasonality hypothesis*) . Since we will consider more than one predictor variable, we will use multiple regression. 
+
+Some exercises will include partially completed code with the `____` representing blanks you have to replace with commands.
+
+---
+
+### Exercise 4.1: Load required packages
+
+We will use the same packages we already loaded in the simple regression tutorial. Here, we will just load **GGally**, which we'll use to make some plots.
+
+**Your Turn:** Type below the commands to load the **GGally**. After you finish writing the code, click `Submit Answer`.
+
+```{r mr_load_packages, exercise = TRUE, exercise.eval = FALSE}
+```
+
+```{r mr_load_packages-solution, exercise.reveal_solution = TRUE, include = FALSE, message = FALSE}
+library(GGally)
+```
+
+```{r mr_load_packages-check, include = FALSE}
+grade_this_code(correct = "You're all set to start!") 
+```
+
+---
+
+### Exercise 4.2: Investigate correlation among potential predictors
+
+The variables considered by [Johnson et al. 2019](https://doi.org/10.1002/ece3.5883) included:
+
+- `air_temp`:  annual mean air temperature (°C)
+- `water_temp`:  annual mean water temperature (°C)
+- `air_temp_sd`:  annual standard deviation of air temperature (°C)
+- `water_temp_sd`:  annual standard deviation of water temperature (°C)
+
+A major concern in multiple regression is perfect or strong **multicollinearity**, which occurs when predictors are a linear function of other predictors. 
+
+A first, though not ideal, approach to assess potential issues with muticollinearity is to compute correlation coefficients between any pair of predictors. Those whose $|r|$ is high may indicate potential problems as discussed in the lecture. A conservative rule of thumb is a $|r| > 0.7$ threshold.
+
+**Your Turn:** Examine the code below where we select the range of columns with the variables listed above and then pass it to function `ggpairs()` (see its [documentation](https://ggobi.github.io/ggally/reference/ggpairs.html)). Then, click `Submit Answer`.
+
+```{r mr_pred_cor-setup}
+library(lterdatasampler)
+library(tidyverse)
+library(broom)
+library(GGally)
+```
+
+```{r mr_pred_cor, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_pred_cor-setup"}
+pie_crab |>
+select(air_temp:water_temp_sd) |>
+  ggpairs()
+```
+
+```{r mr_pred_cor-solution, exercise.reveal_solution = TRUE, include = FALSE}
+pie_crab |>
+select(air_temp:water_temp_sd) |>
+  ggpairs()
+```
+
+```{r mr_pred_cor-check, include = FALSE}
+grade_this_code(correct = "Examine the plot. In the lower left panels, it will show you a scatterplot for every pair of variables (see intersecting row and column for a given pair). In the upper right panels, it will show you the Pearson correlation coefficient between every pair of variables. The diagonal panels show an estimated density plot for each variable.
+\n 
+Note the high correlation (|r| > 0.7) between `air_temp` and `air_temp_sd`, `water_temp` and `air_temp`, and `water_temp` and `air_temp_sd`") 
+```
+
+### Exercise 4.3: Compute variation inflation factor
+
+While correlation is useful in indicating whether one predictor is associated with another, multicollinearity is about a predictor being a linear combination of other predictors. Even though a predictor may not be strongly correlated to other predictors, it may be well predicted by the combination of those predictors. And that can be an issue...
+
+For this reason, when you have more than two predictors to use, you should compute their **variance inflation factor (VIF)**. It's computed with the equation:
+$$
+\textrm{VIF}_j = \frac{1}{1-R_{j}^{2}}
+$$
+where $j$ indexes the predictor $x_j$ being assessed and $R_{j}^{2}$ is the $R^2$ from a regression of $x_j$ on all the other predictors you're considering.
+
+VIF measures how much the variance of a predictor's coefficient is increased (inflated) because that predictor is a linear function of other predictors in the model. VIF ≥ 3 is often used as a rule of thumb to indicate a potential problem (though others use a less conservative VIF ≥ 5).
+
+Here is a typical protocol: 
+
+1. Compute the VIF for each predictor.
+2. Check whether any VIF is ≥ 3 (or be less conservative and use VIF > 5).
+
+    2.1. If **no**, stop and keep all predictors.
+    
+    2.2. If **yes**, continue with the steps below.
+    
+3. Identify the predictor with the **highest VIF**.
+4. Remove that predictor from the candidate set.
+5. Recompute VIF for the remaining predictors.
+6. Go back to step 2 and repeat this process until all remaining predictors have **VIF < 3 (< 5)**.
+7. Fit your final regression model using the remaining predictors.
+
+**Your Turn:** The code below shows you how to compute the VIF for a single variable: `air_temp`. Feel free to compute the VIF for all other remaining variables (`water_temp`, `air_temp_sd`, and `water_temp_sd`). Then move on to step 2 of the protocol. If you follow the full protocol correctly, you will find that the only variables that should be kept for the analysis are: `water_temp` and `water_temp_sd`. There is no code checking in this exercise, so feel free to just run what is included below or do some more coding to implement the full VIF protocol. Click **Run Code** to see the results and then move on to the next exercise when you're ready.
+
+```{r mr_vif, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_pred_cor-setup"}
+# Regress one predictor (air_temp) on all other predictors
+vif_air_temp <- lm(air_temp ~ water_temp + air_temp_sd + water_temp_sd, data = pie_crab)
+
+# Get R-squared for air-temp
+r2_air_temp <- summary(vif_air_temp)$r.squared 
+
+# Compute VIF for air_temp
+1 / (1 - r2_air_temp) 
+```
+
+### Exercise 4.6: Fit the multiple regression model
+
+In the previous exercise, you already fitted a multiple regression model. Note that you added multiple predictors separated by `+` to the right side of the `~` in the model formula inside function `lm()`.
+
+In the previous exercise, you already fitted a multiple regression model with function `lm()`. Note that you added multiple predictors separated by `+` to the right side of the `~` in the model formula.
+
+In this exercise, you will regress `size` on multiple predictors at once using `lm()`. As seen in the lecture and mentioned in the previous exercise, the two predictors that should be retained for this multiple regression analysis after the assessment of VIF are: `water_temp` and `water_temp_sd`.
+
+**Your Turn:** Examine the code below, fill in the blanks for the variables we need to use in the regression (`size`, `water_temp`, and `water_temp_sd`) and the name of the data frame (`pie_crab`) where R can find them. Then click `Submit Answer`.
+
+```{r mr_fit_model, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_pred_cor-setup"}
+mr_mod_temp <- lm(____ ~ ____ + ____, data = ____)
+```
+
+```{r mr_fit_model-hint-1, include = FALSE}
+mr_mod_temp <- lm(size ~ water_temp + ____, data = ____)
+```
+
+```{r mr_fit_model-hint-2, include = FALSE}
+mr_mod_temp <- lm(size ~ water_temp + water_temp_sd, data = ____)
+```
+
+```{r mr_fit_model-solution, exercise.reveal_solution = TRUE, include = FALSE}
+mr_mod_temp <- lm(size ~ water_temp + water_temp_sd, data = pie_crab)
+```
+
+```{r mr_fit_model-check, include = FALSE}
+grade_this_code(correct = "The multiple regression model has been succesfuly fit to the data! As in our workflow for simple regression, we won't look at the model estimates just yet. First, we need to use the output from `lm()` to check that the model assumptions were met.")
+```
+
+### Exercise 4.5: Check assumptions of the multiple regression model
+
+For multiple regression, we also have to assess whether the **residual variance** is approximately constant and that the **residuals** approximately normally distributed.
+
+**Your Turn:** Examine the code below and fill in the blanks for commands you have already used in earlier exercises. Remember the the model fit output was stored in a variable named `mr_mod_temp`. When you complete the code, click `Submit Answer`.
+
+```{r mr_check_assumptions-setup}
+library(lterdatasampler)
+library(tidyverse)
+library(broom)
+library(GGally)
+
+mr_mod_temp <- lm(size ~ water_temp + water_temp_sd, data = pie_crab)
+```
+
+```{r mr_check_assumptions, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_check_assumptions-setup"}
+# Extract fitted and residual values from model output
+fit_vals <- ____(____) # extract fitted values
+res_vals <- ____(____) # extract residuals
+
+# Plot fitted vs residuals
+plot(____, ____, xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, lty = "dashed")
+
+# Create the histogram of residuals
+____(____, xlab = "Residuals", main = NULL)
+
+# Create a QQ-plot of residuals
+____(____) # make scatterplot of residual quantiles
+____(____) # add reference line
+
+# Test normality of residuals with the Shapiro-Wilk test
+____(____)
+```
+
+```{r mr_check_assumptions-hint-1, include = TRUE}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(____) # extract fitted values
+res_vals <- residuals(____) # extract residuals
+```
+
+```{r mr_check_assumptions-hint-2, include = TRUE}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(mr_mod_temp) # extract fitted values
+res_vals <- residuals(mr_mod_temp) # extract residuals
+```
+
+```{r mr_check_assumptions-hint-3, include = TRUE}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(mr_mod_temp) # extract fitted values
+res_vals <- residuals(mr_mod_temp) # extract residuals
+
+# Plot fitted vs residuals
+plot(fit_vals, res_vals, xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, lty = "dashed")
+```
+
+```{r mr_check_assumptions-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted and residual values from model output
+fit_vals <- fitted(mr_mod_temp) # extract fitted values
+res_vals <- residuals(mr_mod_temp) # extract residuals
+
+# Plot fitted vs residuals
+plot(fit_vals, res_vals, xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, lty = "dashed")
+
+# Create the histogram of residuals
+hist(res_vals, xlab = "Residuals", main = NULL)
+
+# Create a QQ-plot of residuals
+qqnorm(res_vals) # make scatterplot of residual quantiles
+qqline(res_vals) # add reference line
+
+# Test normality of residuals with the Shapiro-Wilk test
+shapiro.test(res_vals)
+```
+
+```{r mr_check_assumptions-check, include = FALSE}
+grade_this_code(correct = "Make sure you examine the plots and the Shapiro-Wilk test result. Would you conclude that the assumptions of the multiple regression model were met?")
+```
+
+### Exercise 4.6: Interpreting the regression output
+
+After checking and concluding that the assumptions of multiple regression were not strongly violated, we can proceed to interpret the regression output.
+
+**Your Turn:** Fill in the blanks below to inspect the model fit output (`mr_mod_temp`) with `summary()` and `tidy()` and click `Submit Answer`.
+
+```{r mr_interpreting_output, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_check_assumptions-setup"}
+____(____) # Use summary()
+
+____(____) # Use tidy()
+```
+
+```{r mr_interpreting_output-hint, include = FALSE}
+summary(____) # Use summary()
+
+tidy(____) # Use tidy()
+```
+
+```{r mr_interpreting_output-solution, exercise.reveal_solution = TRUE, include = FALSE}
+summary(mr_mod_temp) # Use summary()
+
+tidy(mr_mod_temp) # Use tidy()
+```
+
+```{r mr_interpreting_output-check, include = FALSE}
+grade_this_code(correct = "Examine what is printed above. The output of the function `summary()` (in the top box) has a lot of information, including a summary of the residuals, estimates of the intercept and slope with associated test statistics, the residual standard error, and the **adjusted** coefficient of determination R2 (Adjusted R-squared). Even though it show us the Multiple R-squared we will not interpret it as discussed in the lecture. The output of `tidy()` (in the bottom box) will only show you the estimates of the intercept and slope and related statistics.")
+```
+
+### 
+
+```{r mr_interpreting_output-quiz}
+quiz(
+  question("What is the correct interpretation of the slope for `water_temp` and associated _t_-test you just obtained? Assume a significance level of 0.05 and a null hypothesis that the slope is zero. ",
+    answer("Carapace width declines by -0.544 mm for every 1 °C increase in mean water temperature. The probability of observing a _t_ statistic as or more extreme than the one you got is low under the null hypothesis. Therefore the null hypothesis of the slope being zero can be rejected.", 
+           message = "The interpretaion of the slope is incomplete. Check your notes from the lecture to see what is important to highlight in your intepretation."),
+    answer("Carapace width declines by -0.544 mm for every 1 °C increase in mean water temperature, while SD of water temperature is held constant. The probability of the null hypothesis given the observed _t_ statistic is low. Therefore the null hypothesis of the slope being zero can be rejected.",
+           message = "Are we really assessing the probability of the null hypothesis?"),
+    answer("Carapace width declines by -0.544 mm for every 1 °C increase in mean water temperature, while SD of water temperature is held constant. The probability of observing a _t_ statistic as or more extreme than the one you got is low under the null hypothesis. Therefore the null hypothesis of the slope being zero can be rejected.", correct = TRUE),
+    correct = "Correct! In multiple regression, the slope measures the change in the response variable for every _unit_ change in the explanatory variable, **while the other explanatory variables are held constant**. Given the observed _P_-value for the slope (i.e., low probability of observing a _t_ statistic as or more extreme than the one calculated with the data if the null hypothesis of the slope being zero were true), we can reject the null hypothesis that the slope equals zero.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+  ),
+  question("What can you conclude about the slope of `water_temp_sd`? Assume a significance level of 0.05 and a null hypothesis that the slope is zero. ",
+    answer("Carapace width declines by -0.09 mm for every unit increase in SD of water temperature. The probability of observing a _t_ statistic as or more extreme than the one you got is low under the null hypothesis. Therefore the null hypothesis of the slope being zero can be rejected.", 
+           message = "The interpretation of the slope is incomplete. Check your notes from the lecture to see what is important to highlight in your intepretation. Also, can you really reject the null hypothesis that its slope is zero?"),
+    answer("Carapace width declines by -0.09 mm for every unit increase in SD of water temperature, while mean water temperature is held constant. The probability of the null hypothesis given the observed _t_ statistic is high. Therefore the null hypothesis of the slope being zero cannot be rejected.",
+           message = "Are we really assessing the probability of the null hypothesis?"),
+    answer("The probability of observing a _t_ statistic as or more extreme than the one you got for the slope of SD of water temperature is high under the null hypothesis. Therefore the null hypothesis of the slope being zero cannot be rejected and we should not conclude that carapace width changes with SD of water temperature.", correct = TRUE),
+    correct = "Correct! There is no evidence that carapace width varies with SD of water temperature.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+  )
+)
+```
+
+### Exercise 4.7: Make a new data frame for predictions
+
+In the simple regression section, you made a scatterplot with the fitted regression line using `geom_smooth()` in ggplot. This works fine for simple regression models, but when dealing with multiple predictors, you need to use the `predict()` function (to compute the fitted or expected values) with a new data frame containing values for all predictors. The values for the predictor of interest should be created at regular intervals spanning the full range of its values in the data set. 
+
+Here you will create this new data frame (named `new_pie_crab`) with a full range of values for `water_temp` and one value for `water_temp_sd`, representing the median of the observations in `water_temp_sd` (you can use any other reasonable value for `water_temp_sd`, but the mean or median is typical). Rememberm that, because you used multiple regression, you have to compute predictions for the variable of interest (`water_temp`), while keepig the other(s) (`water_temp_sd`) at a fixed value, so you have to provide a value for it. 
+
+You will then pass the model fit object `mr_mod_temp` along with this new data frame to function `predict()` (see [documentation](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.lm), which computes the fitted values (by default named `fit`) for each combination of predictor values and associated 95% (default) confidence interval limits (by default named `lwr` and `upr`). Finally, you will make a single data frame containing both the new predictor values and associated preditions (fitted values) and limits of the confidence interval.
+
+**Your Turn:** Just examine the code below. You will find explanations of some functions that should be new to you as well as some other coding decisions below the R code box. There is no code checking in this exercise, so feel free to modify the code and add the name of a variable below the commands that create it so you get the tutorial to print it for your inspection. If you make a mistake that breaks the code and can't fix it, simply click **Start Over**.
+
+After you examine the code and understand what it is doing, press **Submit Answer** to move on to the next exercise. 
+
+```{r mr_newdata, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_check_assumptions-setup"}
+new_pie_crab <- tibble(
+  water_temp = seq(min(pie_crab$water_temp),
+                   max(pie_crab$water_temp),
+                   length.out = 100),
+  water_temp_sd = median(pie_crab$water_temp_sd)
+  )
+
+pred <- predict(mr_mod_temp, 
+                newdata = new_pie_crab, 
+                interval = "confidence") # the other option is "prediction"
+
+pred_df <- bind_cols(new_pie_crab, 
+                     as.data.frame(pred))
+
+head(pred_df)
+```
+
+- `bind_cols()` (see [documentation](https://dplyr.tidyverse.org/reference/bind_cols.html)) is used to bind the columns of data frame `newdata` with the columns of the data frame created with function `as.data.frame()` (see [documentation](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/as.data.frame)) applied to `pred`.
+
+```{r mr_newdata-check, include = FALSE}
+grade_this({
+  pass("Examine the first ten rows of the prediction data frame you created. Note that you now have regular values of `water_temp` and `water_temp_sd`, predictions (`fit`), and associated limits (`lwr` and `upr`) of a 95% (default) confidence interval computed with the multiple regression model based on these predictor values.")
+})
+```
+
+### Exercise 4.8: Make a scatterplot with fitted lines
+
+You can now create a scatterplot of the observed values `size` and `water_temp_sd` along with the fitted values and confidence intervals computed in the previous exercise.
+  
+**Your Turn:** Just examine the code below. You will find explanations of some functions that should be new to you as well as some other coding decisions below the R code box . There is no code checking in this exercise, so feel free to modify the appearance of the plot if you wish. If you make a mistake that breaks the code and can't fix it, simply click **Start Over**.
+
+After you examine the code and understand what it is doing, press **Submit Answer** to move on to the next exercise. 
+
+```{r mr_plot_fitted-setup, message = FALSE}
+library(lterdatasampler)
+library(tidyverse)
+library(broom)
+library(GGally)
+
+mr_mod_temp <- lm(size ~ water_temp + water_temp_sd, data = pie_crab)
+
+new_pie_crab <- tibble(
+  water_temp = seq(min(pie_crab$water_temp),
+                   max(pie_crab$water_temp),
+                   length.out = 500),
+  water_temp_sd = median(pie_crab$water_temp_sd)
+  )
+
+pred <- predict(mr_mod_temp, 
+                newdata = new_pie_crab, 
+                interval = "confidence") # the other option is "prediction"
+
+pred_df <- bind_cols(new_pie_crab, 
+                     as.data.frame(pred))
+```
+
+```{r mr_plot_fitted-exercise, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_plot_fitted-setup"}
+ggplot() +
+  geom_point(data = pie_crab, 
+             aes(x = water_temp, y = size), alpha = 0.4) +
+  geom_ribbon(data = pred_df,
+              aes(x = water_temp,
+                  ymin = lwr,
+                  ymax = upr),
+                  alpha = 0.2) +
+  geom_line(data = pred_df,
+            aes(x = water_temp,
+                y = fit),
+                linewidth = 1) +
+  xlab("Mean water temperature (°C)") +
+  ylab("Carapace width (mm)") +
+  scale_x_continuous(breaks = seq(14, 24, 2)) + # customize tick marks on y-axis
+  scale_y_continuous(breaks = seq(6, 24, 3)) + # customize tick marks on x-axis
+  theme_classic()
+```
+
+- Note that we do not provide a data frame name to `ggplot()`. Instead, we provide data frame names to each *geom* function, as we want them to use different data frames (i.e., the `pie_crab` data frame to plot the observed values with `geom_point()` and the `pred_df` to plot the prediction and confidence intervals with `geom_line()` and `geom_ribbon()`, respectively).
+
+- `geom_ribbon()` (see [documentation](https://ggplot2.tidyverse.org/reference/geom_ribbon.html)) is use to plot the confidence interval as a shaded area. For each valu of `x`, it requires two values for `y`: `ymin` (in this case the *lower* limit of the 95% confidence interval) and `ymax` (in this case the *upper* limit of the 95% confidence interval).
+
+```{r mr_plot_fitted-check, include = FALSE}
+grade_this({
+  pass("Keep in mind that the fitted` values you plotted above represent the predictions of `size` by `water_temp`, while `water_temp_sd` is fixed at its *median* value in the data set. Given the small effect of `water_temp_sd`, if you change its value in the previous exercise, you will still see a similar pattern in the plot produced here. So we don't bother plotting fitted values while keeping `water_temp_sd` fixed at other values (e.g., values in the 25th and 75th percentiles) in this exercise.")
+})
+```
+
+### Exercise 4.9: Fit multiple regression with standardized predictors
+
+As discussed in the lecture, it's important to fit a multiple regression model that includes **standardized predictors** to better interpret the coefficients and assess the relative importance of each predictor variable when they are measured in different units. When standardizing predictors, you subtract the mean of the predictor ($\bar{x}$) from each observed value ($x_i$) and divide the result by the predictor standard deviation ($s_x$), like so:
+$$
+z_i = \frac{x_i - \bar{x}}{s_x}
+$$
+
+**Your Turn:** Examine the code below and fill in the blanks for commands you have already used in earlier exercises. When you complete the code, click `Submit Answer`.
+
+```{r mr_fit_standardized, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mr_check_assumptions-setup"}
+pie_crab <- pie_crab |>
+  mutate(
+    water_temp_z = (____ - mean(____)) / sd(____),
+    water_temp_sd_z = (____ - mean(____)) / sd(____)
+  )
+
+mr_mod_temp_z <- ____(____ ~ ____ + _____,
+             data = ____)
+
+summary(mr_mod_temp_z)
+
+tidy(mr_mod_temp_z)
+```
+
+```{r mr_fit_standardized-hint-1, include = FALSE}
+pie_crab <- pie_crab |>
+  mutate(
+    water_temp_z = (water_temp - mean(water_temp)) / sd(water_temp),
+    water_temp_sd_z = (____ - mean(____)) / sd(____)
+  )
+```
+
+```{r mr_fit_standardized-hint-2, include = FALSE}
+pie_crab <- pie_crab |>
+  mutate(
+    water_temp_z = (water_temp - mean(water_temp)) / sd(water_temp),
+    water_temp_sd_z = (water_temp_sd - mean(water_temp_sd)) / sd(water_temp_sd)
+  )
+```
+
+```{r mr_fit_standardized-solution, exercise.reveal_solution = TRUE, include = FALSE}
+pie_crab <- pie_crab |>
+  mutate(
+    water_temp_z = (water_temp - mean(water_temp)) / sd(water_temp),
+    water_temp_sd_z = (water_temp_sd - mean(water_temp_sd)) / sd(water_temp_sd)
+  )
+
+mr_mod_temp_z <- lm(size ~ water_temp_z + water_temp_sd_z,
+             data = pie_crab)
+
+summary(mr_mod_temp_z)
+
+tidy(mr_mod_temp_z)
+```
+
+```{r mr_fit_standardized-check, include = FALSE}
+grade_this_code(correct = "Examine what is printed above. If you compare the estimates of intercept and slope to the same estimates you obtained earlier with non-standardized predictors, you will see they are different. 
+\n
+Since standardization involves first centering the predictor variables, it can now be interpreted as the expected value of `size` when both `water_temp` and `water_temp_sd` are at their mean values in the data set.
+\n
+As standardization takes the centered predictors and divide them by their standard deviations, the slopes now are interpreted as the expected change in `size` for every unit chnage in **standard deviation** of the predictor variable. Since both standardized predictors are in units of standard deviation, their effec sizes can be directly compared, revealing that `water_temp` has a much bigger effect (absolute value of the slope) on `size` than does `water_temp_sd`.
+\n
+All else in the outputs above should be identical to the model fitted with non-standardized predictors. Nothing will change either if you use the output of the model with standardized predictors to assess assumptions.
+\n
+The only thing you have to be careful is in making predictions (including those used to make the fitted line in a plot). Now you will have to pass a new data frame with values of the predictor variables in units of standard deviation; NOT in the same units that the predictors were measured!")
+```
+
+### 
+
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on correlation and regression in R and for starting Assignment # 4.
+
+
