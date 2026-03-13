@@ -1,0 +1,1469 @@
+---
+title: "General Linear Models"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+library(learnr)
+library(gradethis)
+```
+
+```{r setup_data, include = FALSE}
+library(tidyverse)
+library(palmerpenguins)
+library(emmeans)
+
+penguins_clean <- penguins |>
+  select(species, sex, flipper_length_mm, body_mass_g) |>
+  drop_na()
+
+# A simple plotting theme used throughout
+theme_set(theme_minimal(base_size = 13))
+
+# Helper for coefficient tolerance
+close_to <- function(x, y, tol = 0.05) {
+  isTRUE(all.equal(x, y, tolerance = tol))
+}
+```
+
+
+## 1. Introduction
+
+In this lab, you will use **general linear models** to compare differences between groups and to control for a continuous covariate when doing so. We'll work with the **penguins** data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes. In all the analyses you will conduct, the response variable will be `body_mass_g`.
+
+You will fit general linear models with:
+
+- one **two-level categorical predictor**: `sex`
+- one **three-level categorical predictor**: `species`
+- two categorical predictors, with and without an interaction: `sex * species` and `sex + species`
+- one categorical and one continuous predictor: `sex + flipper_length_mm`
+
+You will use `lm()` for every analysis. This is important because it lets you see that several familiar tests  (e.g., *t*-test, ANOVA, ANCOVA) are really special cases of the same general modeling framework.
+
+
+### Tutorial Dataset: Penguins from Palmer Achipelago
+
+The `penguins` data frame comes from the [palmerpenguins](https://allisonhorst.github.io/palmerpenguins/) package and contains measurements on penguins observed in the Palmer Archipelago, Antarctica. Penguins differ in body size across species, and males are often heavier than females. Flipper length is also related to body size. In this lab you will ask whether body mass changes with sex, species, and flipper length.
+
+----
+
+## 1. Getting Started 
+
+### Exercise 1.1: Load packages and clean up the data
+
+First, you need to load the packages you will need and do some cleaning of the data to remove NA cases. As you advance your data analysis skills, you should look into approaches that allow you to handle missing data instead of excluding them. But in this course, we will avoid this additional layer of complexity.
+
+The data frame `penguins` is automatically loaded when you load package **palmerpenguins**.
+
+**Your Turn:** Write commands to load the packages [tidyverse](https://tidyverse.org/), [palmerpenguins](https://allisonhorst.github.io/palmerpenguins/), and [emmeans](https://rvlenth.github.io/emmeans/). Then, replace the blanks (`____`) with the required code to select variables `species`, `sex`, `flipper_length_mm`, and `body_mass_g`. Note that the data frame with the cleaned data you will work with will be named `penguins_clean`.
+
+```{r prep_data, exercise = TRUE, exercise.eval = FALSE}
+# Load packages
+
+# Clean up data
+penguins_clean <- penguins |>
+  ____(____, _____, _____, _____) |>
+  drop_na()
+```
+
+```{r prep_data-hint-1, include = FALSE}
+# Load packages
+library(tidyverse)
+library(palmerpenguins)
+library(emmeans)
+```
+
+```{r prep_data-hint-2, include = FALSE}
+# Clean up data
+penguins_clean <- penguins |>
+  select(____, _____, _____, _____) |>
+  drop_na()
+```
+
+```{r prep_data-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Load packages
+library(tidyverse)
+library(palmerpenguins)
+library(emmeans)
+
+# Clean up data
+penguins_clean <- penguins |>
+  select(species, sex, flipper_length_mm, body_mass_g) |>
+  drop_na()
+```
+
+```{r prep_data-check, include = FALSE}
+grade_this_code(
+  correct = "You're all set!"
+)
+```
+
+### Exercise 1.2: Summarize the data frame
+
+Let's take a look at a summary of the data just to keep a good habit (there are no issues with these data).
+
+**Your Turn:** Write code to summarize the data frame `penguins_clean`.
+
+```{r summary, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+```
+
+```{r summary-hint, include = FALSE}
+summary(____)
+```
+
+```{r summary-solution, exercise.reveal_solution = TRUE, include = FALSE}
+summary(penguins_clean)
+```
+
+```{r summary-check, include = FALSE}
+grade_this_code(
+  correct = "You can now see the counts of each level in factor variables and the summary statistics of the continuous variables."
+)
+```
+
+## 2. One two-level categorical predictor
+
+In this section, you will learn how to fit a model with a single two-level categorical predictor. Specifically, you will fit the model relating `body_mass_g` to `sex`. Here you will work with a subset of the data that focuses on Adelie penguins.
+
+### Exercise 2.1: Visualize the data
+
+Before fitting a model, it helps to look at the data. But first you need to filter it to only include observations of Adélie penguins.
+
+**Your Turn:** Replace the blanks (`____`) with the required code. First, create a new data frame data (name it `adelie`) by filtering `penguins_clean` to include only `"Adelie"` penguins. Then, use `ggplot()` to make a boxplot with `sex` on the x-axis and `body_mass_g` on the y-axis.
+
+```{r sex_boxplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+# Filter the data to include only Adelie penguins
+____ <- penguins_clean |>
+  ____(____)
+
+# Make the boxplot
+____(____, ____(x = ____, y = ____)) +
+  ____() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Sex") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r sex_boxplot-hint-1}
+# Use the filter() function to keep only
+# observations where species == "Adelie". 
+# Then assign the filtered data to variable
+# named adelie.
+```
+
+```{r sex_boxplot-hint-2, include = FALSE}
+ggplot(adelie, aes(x = ____, y = ____)) +
+  ____() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Sex") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r sex_boxplot-hint-3, include = FALSE}
+ggplot(adelie, aes(x = ____, y = ____)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Sex") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r sex_boxplot-solution}
+# Filter the data to include only Adelie penguins
+adelie <- penguins_clean |>
+  filter(species == "Adelie")
+
+# Make the boxplot
+ggplot(adelie, aes(x = sex, y = body_mass_g)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Sex") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r sex_boxplot-check}
+grade_this_code(
+  correct = "Examine the plot. It gives you a quick visual sense of whether and by how much males and females differ in body mass."
+)
+```
+
+### Exercise 2.2: Fit the model
+
+The model you will fit includes only one categorical predictor, `sex`, with two levels: `female` and `male`. In R, the model is fit with the following command:
+
+```r
+mod_sex <- lm(body_mass_g ~ sex, data = adelie)
+```
+
+When you execute this command, by default R uses an **effects** parameterization where:
+
+- the **intercept** represents the mean body mass for the reference level (`female`)
+- the other coefficient represents the difference in body mass between males and females (i.e., mean body mass of males - mean body mass of females).
+
+Unless factor variables have been created with a customized order of levels defined by you (see [`relevel()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/relevel)), by default R  will sort the levels alphabetically (e.g., in a step where you convert a character variable to factor). Then, model fitting functions like `lm()` will pick the first level in a factor alphabetically and use it as the reference level (i.e., as the **intercept**). This is why we know `female` is the reference level for `sex` in this and subsequent analyses that use the sex factor.
+
+**Your Turn:** Replace the blanks (`____`) with the required code. Use the `lm()` function to fit the model of `body_mass_g` as a function of `sex`. Assign the output to a variable named `mod_sex`.
+
+```{r fit_sex, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+____ <- ____(____, ____)
+```
+
+```{r fit_sex-hint}
+# To fit the model, check out the command in the 
+# code example above!
+```
+
+```{r fit_sex-solution, exercise.reveal_solution = TRUE, include = FALSE}
+mod_sex <- lm(body_mass_g ~ sex, data = adelie)
+```
+
+```{r fit_sex-check}
+grade_this_code(
+  correct = "The model has been successfuly fit and the output assigned to `mod_sex`."
+)
+```
+
+### Exercise 2.3: Assess the model assumptions
+
+Before you look at the model parameter estimates, you have to ensure that the model assumptions were met. Here you will assess the assumptions of:
+
+- Residual normality using a histogram and QQ-plot
+- Residual homocedasticity (i.e., constant variance) using residual *vs.* fitted plot.
+
+**Your Turn:** Replace the blanks (`____`) with the required code to extract fitted and residual values from the model output, then to make the required plots.
+
+```{r fitted_sex, exercise.setup = "setup_data"}
+adelie <- penguins_clean |>
+  filter(species == "Adelie")
+
+mod_sex <- lm(body_mass_g ~ sex, data = adelie)
+```
+
+```{r assess_sex, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex"}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- ____(____)
+res <- ____(____)
+
+# Make histogram using hist()
+____(____)
+
+# Make QQ-plot using qqnorm() and qqline()
+____(____)
+____(____)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+____(____, ____)
+____(a = ____, b = ____, lty = "dashed")
+```
+
+```{r assess_sex-hint}
+# These are the exact same commands that you 
+# learned in the last lab for simple and 
+# multiple regression. Check your notes.
+```
+
+```{r assess_sex-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- fitted(mod_sex)
+res <- residuals(mod_sex)
+
+# Make histogram using hist()
+hist(res)
+
+# Make QQ-plot using qqnorm() and qqline()
+qqnorm(res)
+qqline(res)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r assess_sex-check}
+grade_this_code(
+  correct = "You should see minor deviations of the normality assumption (QQ-plot indicates slightly thinner tails than expected for a Normal distribution; compare to slides of the lecture on simple regression), and the homocedasticity assumption (residual *vs.* fitted plot shows a bit more variability in male residuals [right], than in female residuals [left]). These deviations are minor and won't affect inference much, so we will proceed with model interpretation."
+)
+```
+
+### Exercise 2.3: Print the model summary
+
+Now that we confirmed the model assumptions were reasonably met, let's take a look at the model estimates.
+
+**Your Turn:** Write the command to make R show a summary of the model output.
+
+```{r summary_sex, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex"}
+
+```
+
+```{r summary_sex-hint}
+# Use function summary()
+```
+
+```{r summary_sex-solution}
+summary(mod_sex)
+```
+
+```{r summary_sex-check}
+grade_this_code(
+  correct = "Examine the estimate for the intercept and the coefficient for the effect of male (`sexmale`), as well as the t value, and the P value (`Pr(>|t|`)."
+)
+```
+
+### 
+
+```{r summary_sex-quiz}
+quiz(
+  question(
+    "Which statement is the correct interpretation about the intercept?",
+      answer("The intercept is the mean body mass of the reference sex level (female).", 
+             correct = TRUE),
+      answer("The intercept is the overall mean across both sexes."),
+      answer("The intercept is the mean body mass of the non-reference sex level (male)."),
+      allow_retry = TRUE,
+      random_answer_order = TRUE
+  ),
+  
+  question(
+    "Which statement is the correct interpretation about the effect of sex?",
+      answer("The coefficient for `sexmale` is the mean body mass of males."),
+      answer("The coefficient for `sexmale` is the difference between the mean body mass of males and the reference level (female).", 
+             correct = TRUE),
+      allow_retry = TRUE,
+      random_answer_order = TRUE
+  ),
+  
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 2.4: Plot estimated mean body mass by sex
+
+Now you will create a plot showing the estimated mean body mass for females and males, with 95% confidence intervals. This type of plot will become increasingly more important as we add more factors to the models, which makes interpretation of the coefficient values challenging. Here is the general workflow for creating this type of plot after fitting and checking your model:
+
+1. Create a new data frame of predictor values (the variable holding the values `male` and `female` **must** be named with the same name of the variable used in the model, i.e., `sex`)
+2. Generate predicted values for the new data frame with [`predict()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.lm)
+3. Combine predictions with predictor values
+4. Plot the estimated means and confidence interval (and/or prediction interval)
+
+**Your Turn:** Just examine the code below to understand the workflow. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
+
+```{r plot_fit_sex, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex"}
+# Make new data frame for predictions
+new_sex <- tibble(
+  sex = c("female", "male")
+)
+
+# Make predictions for the values in the new 
+# data frame and combine it with the new_sex
+# data frame to create a new data frame 
+# called pred_sex
+pred_sex <- new_sex |>
+  bind_cols(
+    predict(mod_sex, newdata = new_sex, 
+            interval = "confidence", level = 0.95)  
+  )
+
+# Inspect pred_sex
+pred_sex
+
+# Plot estimated body mass with 95% confidence
+# interval by sex
+ggplot(pred_sex, aes(x = sex, y = fit)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0) +
+  labs(
+    x = "Sex",
+    y = "Estimated body mass (g)"
+  ) +
+  theme_classic()
+```
+
+```{r plot_fit_sex-check}
+grade_this({
+  pass("Look at the `pred_sex` data frame. Th`e variable `sex` is the one you created in `new_sex`. Variables `fit` (estimated mean body mass), `lwr` and `upr` (lower and upper limits of confidence interval) were created with function `predict()` and combined with `new_sex` to create `pred_sex`.
+\n
+You can change interval to `prediction` to compute prediction interval instead. Experiment with that and you will see that it's much wider than the confidence interval. You can also change `level` to another number between 0 and 1 to define another confidence level. Here, the code explicitly uses 0.95 for 95% confidence level, but this is actually the default value. So if you want 95% confidence level, you don't need to specify it.")
+})
+```
+
+```{r plot_fit_sex-quiz}
+quiz(
+  question(
+  "Why are prediction intervals wider than confidence intervals?",
+  answer("They include uncertainty about predicting individual observations.", correct = TRUE),
+  answer("They are computed with a smaller sample size."),
+  answer("They ignore model uncertainty."),
+  answer("They are equal to confidence intervals multiplied by the sample size."),
+  correct = "Correct! Prediction intervals include both uncertainty in the mean AND variation among individuals.",
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+  ),
+  
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 2.4: Examine equivalence to *t*-test
+
+The model you fitted in this section of the tutorial is the linear-model version of a **two-sample *t*-test**. You can verify that the results from the linear model are equivalent to those from a traditional two-sample *t*-test by using the base R [`t.test()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/t.test) function (by default, it runs the [Welch two-sample *t*-test](https://en.wikipedia.org/wiki/Welch%27s_t-test), which relaxes the assumption of same variance between groups.
+
+**Your Turn:** Use `t.test()` to compare body mass between sexes of Adelie penguins.
+
+```{r ttest_sex, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex"}
+# Use t.test() to run the test
+____(body_mass_g ~ sex, data = adelie)
+
+# Print the summary of mod_sex for comparison
+summary(mod_sex)
+```
+
+```{r ttest_sex-hint}
+t.test(body_mass_g ~ sex, data = adelie)
+```
+
+```{r ttest_sex-solution}
+# Use t.test() to run the test
+t.test(body_mass_g ~ sex, data = adelie)
+
+# Print the summary of mod_sex for comparison
+summary(mod_sex)
+```
+
+```{r ttest_sex-check}
+grade_this_code(
+  correct = "Note that the absolute value of the *t*-test statistic and P-values are identical (to rounding place) between the two approaches."
+)
+```
+
+## 3. One three-level categorical predictor
+
+In this section, you will learn how to fit a model with a three-level categorical predictor. Specifically, you will fit the model relating `body_mass_g` to `species` (levels are: `Adelie`, `Chinstrap`, and `Gentoo`). Here you will work with the full clean data set you prepared earlier in the tutorial: `penguins_clean`.
+
+### Exercise 3.1: Visualize the data
+
+Before fitting the model, take a look at the data. 
+
+**Your Turn:** Replace the blanks (`____`) with the required code. Use `ggplot()` to make a boxplot with `species` on the x-axis and `body_mass_g` on the y-axis.
+
+```{r spp_boxplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+____(____, ____(x = ____, y = ____)) +
+  ____() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r spp_boxplot-hint-1}
+ggplot(penguins_clean, aes(x = ____, y = ____)) +
+  ____() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r spp_boxplot-hint-2, include = FALSE}
+ggplot(penguins_clean, aes(x = ____, y = ____)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r spp_boxplot-solution}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic()
+```
+
+```{r spp_boxplot-check}
+grade_this_code(
+  correct = "Examine the plot. It gives you a quick visual sense of whether and by how much species differ in body mass."
+)
+```
+
+### Exercise 3.2: Fit the model
+
+The model you will fit includes only one categorical predictor, `species`, with three levels: `Adelie`, `Chinstrap`, and `Gentoo`. In R, the model is fit with the following command:
+
+```r
+mod_species <- lm(body_mass_g ~ species, data = penguins_clean)
+```
+
+When you execute this command, by default R uses an **effects** parameterization where:
+
+- the **intercept** represents the mean body mass for the reference level (`Adelie`)
+- the other coefficient represents the difference in body mass between `Chinstrap` and `Adelie` (i.e., mean body mass of Chinstrap - mean body mass of Adelie) and between between `Gentoo` and `Adelie` (i.e., mean body mass of Gentoo - mean body mass of Adelie)
+
+**Your Turn:** Replace the blanks (`____`) with the required code. Use the `lm()` function to fit the model of `body_mass_g` as a function of `species`. Assign the output to a variable named `mod_species`.
+
+```{r fit_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+____ <- ____(____, ____)
+```
+
+```{r fit_species-hint}
+# To fit the model, check out the command in the 
+# code example above!
+```
+
+```{r fit_species-solution}
+mod_species <- lm(body_mass_g ~ species, data = penguins_clean)
+```
+
+```{r fit_species-check}
+grade_this_code(
+  correct = "The model has been successfuly fit and the output assigned to `mod_species`."
+)
+```
+
+### Exercise 3.3: Assess the model assumptions
+
+Before you look at the model parameter estimates, you have to ensure that the model assumptions were met. Here you will assess the assumptions of:
+
+- Residual normality using a histogram and QQ-plot
+- Residual homocedasticity (i.e., constant variance) using residual *vs.* fitted plot.
+
+**Your Turn:** Replace the blanks (`____`) with the required code to extract fitted and residual values from the model output, then to make the required plots.
+
+```{r fitted_species, exercise.setup = "setup_data"}
+mod_species <- lm(body_mass_g ~ species, data = penguins_clean)
+```
+
+```{r assess_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- ____(____)
+res <- ____(____)
+
+# Make histogram using hist()
+____(____)
+
+# Make QQ-plot using qqnorm() and qqline()
+____(____)
+____(____)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+____(____, ____)
+____(a = ____, b = ____, lty = "dashed")
+```
+
+```{r assess_species-hint}
+# Check out the same exercise in section 2.
+```
+
+```{r assess_species-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- fitted(mod_species)
+res <- residuals(mod_species)
+
+# Make histogram using hist()
+hist(res)
+
+# Make QQ-plot using qqnorm() and qqline()
+qqnorm(res)
+qqline(res)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r assess_species-check}
+grade_this_code(
+  correct = "Once again, you should see minor deviations of the normality assumption and the homocedasticity assumption (residual *vs.* fitted plot shows a bit more variability in Gentoo residuals [far right] than for the other two species). These deviations are minor and won't affect inference much, so we will proceed with model interpretation."
+)
+```
+
+### Exercise 3.4: Print the model summary
+
+Now that we confirmed the model assumptions were reasonably met, let's take a look at the model estimates.
+
+**Your Turn:** Write the command to make R show a summary of the model output.
+
+```{r summary_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+
+```
+
+```{r summary_species-hint}
+# Use function summary()
+```
+
+```{r summary_species-solution}
+summary(mod_species)
+```
+
+```{r summary_species-check}
+grade_this_code(
+  correct = "Examine the estimate for the intercept and the coefficient for the effect of Chinstrap (`speciesChinstrap`) and Gentoo (`speciesGentoo`), as well as the *t* values, and the P values (`Pr(>|t|`). 
+\n
+Keep in mind that the *t*-tests shown for Chinstrap and Gentoo are only testing the null hypotheses that their effects compared to Adelie (i.e., the difference in their mean body mass compared to that of Adelie) are zero. They tell you nothing about whether there is no difference between the body masses of Chinstrap and Gentoo."
+)
+```
+
+### Exercise 3.5: Produce an ANOVA table from the model
+
+To compare the body size of all species, we will resort to different testing approaches. Recall from the lecture that the model you fitted in this section of the tutorial is the linear-model version of a **one-way ANOVA** (ANOVA with one factor variable). It allows you to test the null hypothesis that the mean body mass of all three species is the same:
+
+$$
+\textrm{H}_0: \mu_{Adelie}=\mu_{Chinstrap}=\mu_{Gentoo}
+$$
+
+That is, the ANOVA test allows you to answer the question: does mean body mass differ between at least one pair of species? 
+
+**Your Turn:** Replace the blanks (`____`) with the required code to use the base R function [`anova()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/anova) on the fitted model `mod_species`.
+
+```{r anova_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+____(____)
+```
+
+```{r anova_species-hint}
+anova(____)
+```
+
+```{r anova_species-solution}
+anova(mod_species)
+```
+
+```{r anova_species-check}
+grade_this_code(
+  correct = "This is the typical ANOVA table. The *F* statistic is used to test the null hypothesis stated above. Based on the *P*-value, would you reject or not that null hypothesis?"
+)
+```
+
+### Exercise 3.6: Test all pairwise differences between species
+
+Since the *P*-value of the ANOVA you ran in the previous exercise is very small, we can reject the null hypothesis that the mean body mass of all three species is the same. This tells us that at least one pair of species differs in mean body mass. However, the ANOVA does not tell us which species differ from each other.
+
+To answer that question, we need to perform *post-hoc* pairwise comparisons between species. Because we are making several comparisons at once, the chance of making a Type I error (incorrectly concluding that two species differ when they do not) increases. To control for this, we adjust the *P*-values using a multiple-comparison procedure such as Tukey’s Honest Significant Difference (HSD) test.
+
+**Your Turn:** Just examine the code below to understand the  use of the functions to run Tukey's HSD test on a `lm()` model output. Function [`emmeans()`](https://www.rdocumentation.org/packages/emmeans/versions/2.0.1/topics/emmeans) is used to compute the estimated (marginal) means of body mass per species. We then use a pipe to pass its output to function [`pairs()`](https://www.rdocumentation.org/packages/emmeans/versions/0.9/topics/contrast) with argument `adjust = "tukey"` so it tests all pairwise differences of means computed by `emmeans()` using Tukey's HSD test.
+
+```{r tukey_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+emmeans(mod_species, ~ species) |> 
+  pairs(adjust = "tukey")
+```
+
+```{r tukey_species-check}
+grade_this({
+  pass("Take some time to examine the result. The column `constrast` shows which pair of species it's comparing, and `estimate` shows the difference in body mass between each pair of species. The *P*-value of the Tukey test can be used to decide whether or not to reject the null hypothesis that mean body mass is the same between a given pair of species. Which null hypotheses of no difference would you reject based on the table shown above?")
+})
+```
+
+### Exercise 3.7: Plot estimated mean body mass by species
+
+Now you will create a plot showing the estimated mean body mass for each species, with 95% confidence intervals. Remember the workflow we used in Section 2, as it also applies here:
+
+1. Create a new data frame of predictor values (the three different species names)
+2. Generate predicted values for the new data frame with [`predict()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.lm)
+3. Combine predictions with predictor values
+4. Plot the estimated means and confidence interval (and/or prediction interval)
+
+**Your Turn:** Replace the blanks (`____`) with the required code to make the plot.
+
+```{r plot_fit_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+# Make new data frame for predictions
+new_species <- ____(
+  ____ = c(____, ____, ____)
+)
+
+# Make predictions for the values in the new 
+# data frame and combine it with the new_species
+# data frame to create a new data frame 
+# called pred_species
+pred_species <- ____ |>
+  ____(
+    ____(____, newdata = ____, 
+            interval = "confidence", level = 0.95)  
+  )
+
+# Inspect pred_species
+pred_species
+
+# Plot estimated body mass with 95% confidence
+# interval by species
+ggplot(____, aes(x = ____, y = ____)) +
+  ____(size = 3) +
+  ____(aes(ymin = ____, ymax = ____), width = 0) +
+  labs(
+    x = "Species",
+    y = "Estimated body mass (g)"
+  ) +
+  theme_classic()
+```
+
+```{r plot_fit_species-hint}
+# Review code in exercise 2.4
+```
+
+```{r plot_fit_species-solution}
+# Make new data frame for predictions
+new_species <- tibble(
+  species = c("Adelie", "Chinstrap", "Gentoo")
+)
+
+# Make predictions for the values in the new 
+# data frame and combine it with the new_species
+# data frame to create a new data frame 
+# called pred_species
+pred_species <- new_species |>
+  bind_cols(
+    predict(mod_species, newdata = new_species, 
+            interval = "confidence", level = 0.95)  
+  )
+
+# Inspect pred_species
+pred_species
+
+# Plot estimated body mass with 95% confidence
+# interval by species
+ggplot(pred_species, aes(x = species, y = fit)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0) +
+  labs(
+    x = "Species",
+    y = "Estimated body mass (g)"
+  ) +
+  theme_classic()
+```
+
+```{r plot_fit_species-check}
+grade_this_code(
+  correct = "Well done. The plot gives you a good idea of the expected body mass of each species and how it varies across species, while also showing you the uncertainty in the estimates."
+)
+```
+
+## 4. Two categorical predictors
+
+In this section, you will learn how to fit a model with two-categorical predictors. Specifically, you will fit the model relating `body_mass_g` to both `sex` and `species` as well as their **interaction**. An interaction means that the effect of one variable depends on the level of another variable. For example, the difference in body mass between males and females might be larger in some species than in others.
+
+### Exercise 4.1: Visualize the data
+
+Before fitting the model, take a look at the data. 
+
+**Your Turn:** Replace the blanks (`____`) with the required code. Use `ggplot()` to make a boxplot with `species` on the x-axis and `body_mass_g` on the y-axis. 
+
+```{r sex_spp_boxplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+____(____, ____(x = ____, y = ____,
+                group = interaction(species, sex), 
+                colour = sex)) +
+  ____() +
+  geom_jitter(position = position_jitterdodge(dodge.width = 0.8,
+                                              jitter.width = 0.2), 
+              alpha = 0.2) +  
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_spp_boxplot-hint}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g,
+                           group = interaction(species, sex),
+                           colour = sex)) +
+  ____() +
+  geom_jitter(position = position_jitterdodge(dodge.width = 0.8,
+                                              jitter.width = 0.2), 
+              alpha = 0.2) +
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_spp_boxplot-solution}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g,
+                           group = interaction(species, sex),
+                           colour = sex)) +
+  geom_boxplot() +
+  geom_jitter(position = position_jitterdodge(dodge.width = 0.8,
+                                              jitter.width = 0.2), 
+              alpha = 0.2) +
+  xlab("Species") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_spp_boxplot-check}
+grade_this_code(
+  correct = "Examine the plot. It gives you a quick visual sense of how sexes differ within each species, as well as how each sex differ across species. In the code above, note the use of the aesthetic `group` and `colour`. For the `group` aesthetic we use the `interaction()` function to create combinations of `sex` and `species`, so that ggplot treats each sex–species combination as a separate group when drawing the boxplot. Without this, ggplot would group observations only by species and would not correctly separate males and females within each species.
+\n
+For the `colour` aesthetic we use `sex`, so that ggplot draws male and female boxplots with different colours (here we let ggplot apply its default colours to keep the code short).")
+```
+
+### Exercise 4.2: Fit the model
+
+The model you will fit includes two categorical predictors, `sex`and `species`, and their interaction. In R, the model is fit with the following command:
+
+```r
+mod_sex_species <- lm(body_mass_g ~ sex * species, data = penguins_clean)
+```
+The `*` in the model formula above expands to:
+
+```r
+sex + species + sex:species
+```
+
+When you execute this command, by default R uses an **effects** parameterization where:
+
+- the **intercept** represents the mean body mass for a combination of the reference level of each categorical predictor (`sex` and `Adelie`)
+- the other coefficient represents the difference in body mass between male and female (i.e., mean body mass of male - mean body mass of female), between `Chinstrap` and `Adelie` (i.e., mean body mass of Chinstrap - mean body mass of Adelie), between `Gentoo` and `Adelie` (i.e., mean body mass of Gentoo - mean body mass of Adelie), and their interactions. 
+
+**Your Turn:** Replace the blanks (`____`) with the required code. Use the `lm()` function to fit the model of `body_mass_g` as a function of `sex`, `species`, and their interaction. Assign the output to a variable named `mod_sex_species`.
+
+```{r fit_sex_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_data"}
+____ <- ____(____, ____)
+```
+
+```{r fit_sex_species-hint}
+# To fit the model, check out the command in the 
+# code example above!
+```
+
+```{r fit_sex_species-solution}
+mod_sex_species <- lm(body_mass_g ~ sex * species, data = penguins_clean)
+```
+
+```{r fit_sex_species-check}
+grade_this_code(
+  correct = "The model has been successfuly fit and the output assigned to `mod_sex_species`."
+)
+```
+
+### Exercise 4.3: Assess the model assumptions
+
+Before you look at the model parameter estimates, you have to ensure that the model assumptions were met. Here you will assess the assumptions of:
+
+- Residual normality using a histogram and QQ-plot
+- Residual homocedasticity (i.e., constant variance) using residual *vs.* fitted plot.
+
+**Your Turn:** Replace the blanks (`____`) with the required code to extract fitted and residual values from the model output, then to make the required plots.
+
+```{r fitted_sex_species, exercise.setup = "setup_data"}
+mod_sex_species <- lm(body_mass_g ~ sex * species, data = penguins_clean)
+```
+
+```{r assess_sex_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_species"}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- ____(____)
+res <- ____(____)
+
+# Make histogram using hist()
+____(____)
+
+# Make QQ-plot using qqnorm() and qqline()
+____(____)
+____(____)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+____(____, ____)
+____(a = ____, b = ____, lty = "dashed")
+```
+
+```{r assess_sex_species-hint}
+# Check out the same exercise in section 2 or 3.
+```
+
+```{r assess_sex_species-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- fitted(mod_sex_species)
+res <- residuals(mod_sex_species)
+
+# Make histogram using hist()
+hist(res)
+
+# Make QQ-plot using qqnorm() and qqline()
+qqnorm(res)
+qqline(res)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r assess_sex_species-check}
+grade_this_code(
+  correct = "Once again, you should see very minor deviations of the normality assumption and the homocedasticity assumption (residual *vs.* fitted plot shows a bit more variability in some combinations of sex x species than others). These deviations are minor and won't affect inference much, so we will proceed with model interpretation."
+)
+```
+
+### Exercise 4.4: Print the model summary
+
+Now that we confirmed the model assumptions were reasonably met, let's take a look at the model estimates.
+
+**Your Turn:** Write the command to make R show a summary of the model output.
+
+```{r summary_sex_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_species"}
+
+```
+
+```{r summary_sex_species-hint}
+# Use function summary()
+```
+
+```{r summary_sex_species-solution}
+summary(mod_sex_species)
+```
+
+```{r summary_sex_species-check}
+grade_this_code(
+  correct = "Examine the estimate for the intercept and the coefficients for the effects of sex, species, and interactions. You will notice it gets a lot harder to interpret them when we have interactions. Also, it doesn't make sense to interpret main effects when an interaction is present in a model, since the effect of one factor depends on each level of the other factor you're considering.
+\n
+So let's ignore the coefficient estimates for now. We'll instead use an ANOVA approach and then plot the model predictions of mean body size to help with the interpretation." 
+)
+```
+
+### Exercise 4.5: Produce an ANOVA table from the model
+
+Recall from the lecture that the model you fitted in this section of the tutorial is the linear-model version of a **two-way ANOVA** (ANOVA with two factor variables). It allows you to test the null hypothesis that the difference in body mass of males and females is the same across all three species:
+
+$$
+H_0: (\mu_{Adelie, male}-\mu_{Adelie, female}) 
+= (\mu_{Chinstrap, male} - \mu_{Chinstrap, female})
+= (\mu_{Gentoo, male}-\mu_{Gentoo, female})
+$$
+Or, equivalently, the null hypothesis that the differences in body mass between species are the same for males and females:
+
+$$
+H_0:
+(\mu_{Adelie,\,male} - \mu_{Chinstrap,\,male}) 
+= (\mu_{Adelie,\,female} - \mu_{Chinstrap,\,female}) \\
+(\mu_{Gentoo,\,male} - \mu_{Chinstrap,\,male})
+= (\mu_{Gentoo,\,female} - \mu_{Chinstrap,\,female})
+$$
+Note that in the latter we don't need to specificy the difference between Adelie and Gentoo because its implicit. That is, if Adelie and Gentoo differences relative to Chinstrap are the same for males and females, then the Adelie–Gentoo difference must also be the same for males and females.
+
+Essentially, the ANOVA test in this interaction model allows you to answer both of the questions: 
+
+- Does differences in body mass between male and female vary with species?
+- Does differences in body mass between species vary with sex?
+
+**Your Turn:** Replace the blanks (`____`) with the required code to use the base R function [`anova()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/anova) on the fitted model `mod_sex_species`.
+
+```{r anova_sex_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_species"}
+____(____)
+```
+
+```{r anova_sex_species-hint}
+anova(____)
+```
+
+```{r anova_sex_species-solution}
+anova(mod_sex_species)
+```
+
+```{r anova_sex_species-check}
+grade_this_code(
+  correct = "Based on the *P*-value associated with the *F* test, would you reject or not null hypothesis related to the interaction?"
+)
+```
+
+### Exercise 4.6: Test all pairwise differences
+
+Since the *P*-value of the ANOVA for the interaction you ran in the previous exercise is very small, we can reject the null hypothesis that the difference in body mass of males and females is the same across all three species (or equivalently, that the differences in body mass between species are the same for males and females). 
+
+You will now apply Tukey's HSD test to answer these two questions:
+
+- Within each species, do males and females differ in mean body mass?
+- Within each sex, do the species differ in mean body mass?
+
+**Your Turn:** Just examine the code below to understand the use of the functions to run Tukey's HSD **conditional** test on a `lm()` model output. .
+
+```{r tukey_sex_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+# Test if sexes differ within each species
+emmeans(mod_sex_species, ~ sex | species ) |> 
+  pairs(adjust = "tukey")
+
+# Test if species differ within each sex
+emmeans(mod_sex_species, ~ species | sex ) |> 
+  pairs(adjust = "tukey")
+```
+
+```{r tukey_sex_species-check}
+grade_this({
+  pass("Take some time to examine the result. Which null hypotheses of no difference would you reject based on the table shown above?")
+})
+```
+
+### Exercise 4.7: Plot estimated mean body mass by sex and species
+
+Now you will create a plot showing the estimated mean body mass for each sex by species, with 95% confidence intervals. Remember the workflow we used in Section 2, as it also applies here:
+
+1. Create a new data frame of predictor values (two columns showing all combinations between sex and species)
+2. Generate predicted values for the new data frame with [`predict()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.lm)
+3. Combine predictions with predictor values
+4. Plot the estimated means and confidence interval (and/or prediction interval)
+
+**Your Turn:** Replace the blanks (`____`) with the required code to make the plot.
+
+```{r plot_fit_sex_species, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_species"}
+# Make new data frame for predictions
+new_sex_species <- expand_grid(
+  sex = c(____, ____)
+  species = c(____, ____, ____)
+)
+
+# Make predictions for the values in the new 
+# data frame and combine it with the new_sex_species
+# data frame to create a new data frame 
+# called pred_sex_species
+pred_sex_species <- ____ |>
+  ____(
+    ____(____, newdata = ____, 
+         interval = "confidence", level = 0.95)  
+  )
+
+# Inspect pred_sex_species
+pred_sex_species
+
+# Plot estimated body mass with 95% confidence
+# interval by sex and species
+ggplot(____, aes(x = ____, y = ____,
+                 group = interaction(sex, species),
+                 colour = sex))  +
+  ____(size = 3) +
+  ____(aes(ymin = ____, ymax = ____), width = 0) +
+  labs(
+    x = "Species",
+    y = "Estimated body mass (g)"
+  ) +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r plot_fit_sex_species-hint}
+# Review code in exercise 3.7
+```
+
+```{r plot_fit_sex_species-solution}
+# Make new data frame for predictions
+new_sex_species <- expand_grid(
+  sex = c("female", "male"),
+  species = c("Adelie", "Chinstrap", "Gentoo")
+)
+
+# Make predictions for the values in the new 
+# data frame and combine it with the new_sex_species
+# data frame to create a new data frame 
+# called pred_sex_species
+pred_sex_species <- new_sex_species |>
+  bind_cols(
+    predict(mod_sex_species, newdata = new_sex_species, 
+            interval = "confidence", level = 0.95)  
+  )
+
+# Inspect pred_sex_species
+pred_sex_species
+
+# Plot estimated body mass with 95% confidence
+# interval by sex and species
+ggplot(pred_sex_species, aes(x = species, y = fit,
+                         group = interaction(sex, species),
+                         colour = sex)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0) +
+  labs(
+    x = "Species",
+    y = "Estimated body mass (g)"
+  ) +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r plot_fit_sex_species-check}
+grade_this_code(
+  correct = "Well done. The plot clearly shows how the difference in mean body mass between males and females vary with species." 
+)
+```
+
+- [expand_grid()](https://tidyr.tidyverse.org/reference/expand_grid.html) takes two vectors (one with values for `sex` and another with values for `species`) and creates a tibble (data frame) with two columns for the same variables but including all possible combinations for sex and species.
+- [interaction()](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/interaction) creates a new factor variable where each value is a combination of sex and species.
+
+
+## 5. One categorical predictor and one continuous predictors
+
+In this section, you will learn how to fit a model with a single two-level categorical predictor and a continuous predictor. This type of analysis allows you to control for the effect of q continuous variable when comparing the response between levels of a factor.
+
+Specifically, you will fit the model relating `body_mass_g` to `sex` and `flipper_length_mm`. This will allow you to better compare body mass between sexes by controlling for the size and address the following question:
+
+- Is there a difference in body mass between males and females of the **same size**, as assessed by flipper length?
+
+Once again, you will work with a subset of the data that focuses on Adelie penguins.
+
+### Exercise 5.1: Visualize the data
+
+Let's look at the data. You don't need to filter the data frame for Adelie again because you already did it earlier in the tutorial. Just remember that the filtered data is stored in the variable `adelie`.
+
+**Your Turn:** Replace the blanks (`____`) with the required code. Use `ggplot()` to make a scatterplot showing the relationships between `flipper_length_mm` (x-axis) and `body_mass_g` (y-axis) by `sex` (simply map aesthetic `colour` to `sex`)
+
+```{r filter_adelie, exercise.setup = "setup_data"}
+adelie <- penguins_clean |>
+  filter(species == "Adelie")
+```
+
+```{r sex_flipper_scatterplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "filter_adelie"}
+____(____, ____(x = ____, y = ____,
+                colour = ____)) +
+  ____(alpha = 0.4) +
+  xlab("Flipper length (mm)") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_flipper_scatterplot-hint-1}
+ggplot(adelie, aes(x = ____, y = ____,
+                   colour = ____)) +
+  ____(alpha = 0.4) +
+  xlab("Flipper length (mm)") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_flipper_scatterplot-hint-2}
+ggplot(adelie, aes(x = ____, y = ____,
+                   colour = ____)) +
+  geom_point(alpha = 0.4) +
+  xlab("Flipper length (mm)") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_flipper_scatterplot-solution}
+ggplot(adelie, aes(x = flipper_length_mm, y = body_mass_g,
+                   colour = sex)) +
+  geom_point(alpha = 0.4) +
+  xlab("Flipper length (mm)") +
+  ylab("Body mass (g)") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+```{r sex_flipper_scatterplot-check}
+grade_this_code(
+  correct = "Examine the plot. It lets you inspect the relationship of body mass with flipper length and the difference between sexes."
+)
+```
+
+### Exercise 5.2: Fit the model
+
+The model you will fit includes only one categorical predictor, `sex`, and one continuous predictor, `flipper_length_mm`. As we saw in the lecture, there is no evidence for an interaction between `sex` and `flipper_length_mm` on `body_mass_g`. So to simplify the tutorial, we will just work with the additive model (i.e., without interactions).
+
+In R, the additive model is fit with the following command:
+
+```r
+mod_sex_flipper <- lm(body_mass_g ~ sex + flipper_length_mm, data = adelie)
+```
+
+When you execute this command, by default R uses an **effects** parameterization where:
+
+- the **intercept** represents the mean body mass for the reference level (`female`)
+- one coefficient will represents the difference in body mass between males and females (i.e., mean body mass of males - mean body mass of females) of the **same size**.
+- the other coefficient will represent the change in body mass (regardless of sex) for every unit change in flipper length.
+
+**Your Turn:** Replace the blanks (`____`) with the required code. To help with interpretation, you will first **center** the variable `flipper_length_mm` by subtracting the mean of the variable from all its values and store the results in the variable `cflipper_length_mm`.
+
+Then, use the `lm()` function to fit the model of `body_mass_g` as a function of `sex` and `cflipper_length_mm`. Assign the output to a variable named `mod_sex_flipper`.
+
+```{r fit_sex_flipper, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "filter_adelie"}
+adelie <- adelie |>
+  mutate(cflipper_length_mm = flipper_length_mm - mean(flipper_length_mm))
+
+____ <- ____(____, ____)
+```
+
+```{r fit_sex_flipper-hint}
+# To fit the model, check out the command in the 
+# code example above!
+```
+
+```{r fit_sex_flipper-solution, exercise.reveal_solution = TRUE, include = FALSE}
+adelie <- adelie |>
+  mutate(cflipper_length_mm = flipper_length_mm - mean(flipper_length_mm))
+
+mod_sex_flipper <- lm(body_mass_g ~ sex + cflipper_length_mm, data = adelie)
+```
+
+```{r fit_sex_flipper-check}
+grade_this_code(
+  correct = "The model has been successfuly fit and the output assigned to `mod_sex_flipper`."
+)
+```
+
+### Exercise 5.3: Assess the model assumptions
+
+Before you look at the model parameter estimates, you have to ensure that the model assumptions were met. Here you will assess the assumptions of:
+
+- Residual normality using a histogram and QQ-plot
+- Residual homocedasticity (i.e., constant variance) using residual *vs.* fitted plot.
+
+**Your Turn:** Replace the blanks (`____`) with the required code to extract fitted and residual values from the model output, then to make the required plots.
+
+```{r fitted_sex_flipper, exercise.setup = "filter_adelie"}
+adelie <- adelie |>
+  mutate(cflipper_length_mm = flipper_length_mm - mean(flipper_length_mm))
+
+mod_sex_flipper <- lm(body_mass_g ~ sex + cflipper_length_mm, data = adelie)
+```
+
+```{r assess_sex_flipper, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_flipper"}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- ____(____)
+res <- ____(____)
+
+# Make histogram using hist()
+____(____)
+
+# Make QQ-plot using qqnorm() and qqline()
+____(____)
+____(____)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+____(____, ____)
+____(a = ____, b = ____, lty = "dashed")
+```
+
+```{r assess_sex_flipper-hint}
+# Check out the same exercise in section 2, 3 or 4.
+```
+
+```{r assess_sex_flipper-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted and residual values with fitted()
+# and residuals()
+fit <- fitted(mod_sex_flipper)
+res <- residuals(mod_sex_flipper)
+
+# Make histogram using hist()
+hist(res)
+
+# Make QQ-plot using qqnorm() and qqline()
+qqnorm(res)
+qqline(res)
+
+# Make the residual vs fitted plot with plot()
+# and abline()
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r assess_sex_flipper-check}
+grade_this_code(
+  correct = "Once again, you should see minor deviations of the normality assumption and the homocedasticity assumption (residual *vs.* fitted plot shows a bit more variability in male residuals [right cluster of points]). These deviations are minor and won't affect inference much, so we will proceed with model interpretation."
+)
+```
+
+### Exercise 5.4: Print the model summary
+
+Now that we confirmed the model assumptions were reasonably met, let's take a look at the model estimates.
+
+**Your Turn:** Write the command to make R show a summary of the model output.
+
+```{r summary_sex_flipper, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_flipper"}
+
+```
+
+```{r summary_sex_flipper-hint}
+# Use function summary()
+```
+
+```{r summary_sex_flipper-solution}
+summary(mod_sex_flipper)
+```
+
+```{r summary_sex_flipper-check}
+grade_this_code(
+  correct = "Examine the estimate for the intercept and the coefficients for `sexmale` and `cflipper_length_mm`, as well as the *t* values, and the P values (`Pr(>|t|`). 
+\n
+Since you have `cflipper_length_mm` as a variable adjusting for penguin size, the estimate `sexmale` tells you how heavier males are compared to females of the **same size**."
+)
+```
+
+### 
+
+```{r summary_sex_flipper-quiz}
+quiz(
+  question(
+    "Which statement is the correct interpretation about the intercept?",
+      answer("The intercept is the mean body mass of the reference sex level (female) with an average flipper length.", 
+             correct = TRUE),
+          answer("The intercept is the mean body mass of the reference sex level (female).", message = "Not quite. Recall that you centered the variable `flipper_lengh_mm`."),
+      answer("The intercept is the overall mean across both sexes."),
+      answer("The intercept is the mean body mass of the non-reference sex level (male)."),
+      allow_retry = TRUE,
+      random_answer_order = TRUE
+  ),
+  
+  question(
+    "Which statement is the correct interpretation about the effect of sex?",
+      answer("The coefficient for `sexmale` is the mean body mass of males of the same size as females."),
+      answer("The coefficient for `sexmale` is the difference between the mean body mass of males and the reference level (female) of the same size.", 
+             correct = TRUE),
+      allow_retry = TRUE,
+      random_answer_order = TRUE
+  ),
+  
+    question(
+    "Which statement is the correct interpretation about the effect of flipper length?",
+      answer("The coefficient for `flipper_length_mm` is the change in body mass for every unit change in flipper length", 
+             correct = TRUE),
+      answer("The coefficient for `flipper_length_mm` is the change in body mass when the penguins eat too much."),
+      answer("The coefficient for `flipper_length_mm` is the change in body mass for every 10 mm change in flipper length"),
+      answer("The coefficient for `flipper_length_mm` is the change in body mass for every 0.1 mm change in flipper length"),
+      allow_retry = TRUE,
+      random_answer_order = TRUE
+  ),
+  
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 5.5: Produce an ANOVA table from the model
+
+Recall from the lecture that the model you fitted in this section of the tutorial is the linear-model version of a **ANCOVA** (analysis of covariance). It allows you to test the null hypothesis that males and females have the same mean body mass after accounting for differences in flipper length:
+
+$$
+H_0: \mu_{female(x_2)}=\mu_{male(x_2)}
+$$
+
+where the $x_2$ stands for a given value of flipper length.
+
+Essentially, the ANCOVA allows you to answer the question: 
+
+- Do males and females of the same size (based on flipper length) differ in body mass?
+
+**Your Turn:** Replace the blanks (`____`) with the required code to use the base R function [`anova()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/anova) on the fitted model `mod_sex_flipper`.
+
+```{r anova_sex_flipper, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_flipper"}
+____(____)
+```
+
+```{r anova_sex_flipper-hint}
+anova(____)
+```
+
+```{r anova_sex_flipper-solution}
+anova(mod_sex_flipper)
+```
+
+```{r anova_sex_flipper-check}
+grade_this_code(
+  correct = "Based on the *P*-value associated with the *F* test, would you reject or not null hypothesis stated above?"
+)
+```
+
+### Exercise 5.6: Plot estimated mean body mass by sex and flipper length
+
+Now you will create a plot showing the estimated mean body mass by flipper length for each sex, with 95% confidence intervals. Remember the workflow we used in Section 2, as it also applies here:
+
+1. Create a new data frame of predictor values (two columns showing combinations for sex and centered flipper length)
+2. Generate predicted values for the new data frame with [`predict()`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.lm)
+3. Combine predictions with predictor values
+4. Plot the estimated means and confidence interval (and/or prediction interval)
+
+**Your Turn:** Just examine the code below. Feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
+
+There are a few new things for you here:
+
+- We use a different strategy to create the new data frame for predictions. We do that because we want to create values of flipper length for each sex that only span the range of values we observed in each sex. This avoids making predictions outside the observed range of flipper lengths for each sex (i.e., extrapolating, which is usually a bad idea). Differently from [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html), which returns a single value for the grouping variable, [`reframe()`](https://dplyr.tidyverse.org/reference/reframe.html) returns more than one value for each group. So we use it here to create a sequence of `cflipper_length_mm` for males and females that spans only the range of observed values in each sex.
+- After that we create a non-centered version of flipper length by adding the mean of `flipper_length_mm` in the `adelie` data frame to the newly created `cflipper_length_mm` values. This won't be used for the predictions, but will be helpful when making the plot so that we can plot the predictions against actual values of flipper length instead of centered flipper length.
+- We plot both observed and predicted values of `body_mass_g` by `flipper_length_mm` for each sex. Note that we do that by specifying the data (`adelie` for observed and `pred_sex_flipper` for model predictinons) to be used by each geom.
+
+```{r plot_fit_sex_flipper, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "fitted_sex_flipper"}
+# Make new data frame for predictions
+new_sex_flipper <- adelie |>
+  group_by(sex) |>
+  reframe(
+    cflipper_length_mm = seq(min(cflipper_length_mm), 
+                            max(cflipper_length_mm), 
+                            length.out = 200)
+  ) |>
+  mutate(flipper_length_mm = cflipper_length_mm + mean(adelie$flipper_length_mm))
+
+# Make predictions for the values in the new 
+# data frame and combine it with the new_sex_flipper
+# data frame to create a new data frame 
+# called pred_sex_flipper
+pred_sex_flipper <- new_sex_flipper |>
+  bind_cols(
+    predict(mod_sex_flipper, newdata = new_sex_flipper, 
+            interval = "confidence", level = 0.95)  
+  )
+
+# Inspect pred_sex_flipper
+pred_sex_flipper
+
+# Plot estimated body mass with 95% confidence
+# interval by flipper length and sex
+ggplot() +
+  geom_ribbon(data = pred_sex_flipper, 
+              aes(x = flipper_length_mm,
+                  ymin = lwr, 
+                  ymax = upr, 
+                  fill = sex), alpha = 0.2) +
+  geom_line(data = pred_sex_flipper, 
+            aes(x = flipper_length_mm,
+                y = fit,
+                group = sex)) +
+  geom_point(data = adelie, 
+             aes(x = flipper_length_mm, 
+                 y = body_mass_g,
+                 colour = sex), alpha = 0.6) +
+  labs(
+    x = "Flipper length (mm)",
+    y = "Expected body mass (g)"
+  ) +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+
+```{r plot_fit_sex_flipper-check}
+grade_this({
+  pass("Inspect the plot. Note that you can now compare the difference in body mass between males and females that have the same size as indicated by flipper length.")
+})
+```
+
+### 
+
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on generel linear models in R and for starting Assignment # 5.
+
+
+
+
+
+
+
+
