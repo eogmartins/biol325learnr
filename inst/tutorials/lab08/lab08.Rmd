@@ -1337,8 +1337,10 @@ quiz(
   
     question(
     "Which statement is the correct interpretation about the effect of flipper length?",
-      answer("The coefficient for `flipper_length_mm` is the change in body mass for every unit change in flipper length", 
+      answer("The coefficient for `flipper_length_mm` is the change in body mass for every unit change in flipper length in a given sex (i.e. holding sex constant).", 
              correct = TRUE),
+      answer("The coefficient for `flipper_length_mm` is the change in body mass for every unit change in flipper length.", 
+             message = "Not quite. Recall that you have a model with mode than one predictor variable. So you have to qualify your interpretation by saying that the other variables are held constant."),
       answer("The coefficient for `flipper_length_mm` is the change in body mass when the penguins eat too much."),
       answer("The coefficient for `flipper_length_mm` is the change in body mass for every 10 mm change in flipper length"),
       answer("The coefficient for `flipper_length_mm` is the change in body mass for every 0.1 mm change in flipper length"),
