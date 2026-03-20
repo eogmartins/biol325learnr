@@ -1460,7 +1460,10 @@ grade_this({
 
 ### 
 
-You have completed this tutorial. Check out this lab's instructions web page for additional learning material on generel linear models in R and for starting Assignment # 5.
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on general linear models in R and for starting Assignment # 5.
+
+
+
 
 
 
