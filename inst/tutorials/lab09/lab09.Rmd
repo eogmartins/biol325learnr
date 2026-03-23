@@ -1,5 +1,5 @@
 ---
-title: "General Linear Models"
+title: "Generalized Linear Models"
 output: 
   learnr::tutorial:
     progressive: true
@@ -20,15 +20,14 @@ library(gradethis)
 
 ## 1. Introduction
 
-In this lab, you will learn how to fit Bernoulli, Binomial, and Poisson generalized linear models (GLM) to data as well as assess the model fit and interpret the results. We'll work with the **mallard (Bernoulli)**, **bald eagle (Binomial)**, and **Galapágos plant richness (Poisson)** data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes.
+In this lab, you will learn how to fit Bernoulli and Binomial generalized linear models (GLM) to data as well as assess the model fit and interpret the results. We'll work with the **mallard (Bernoulli)** and **bald eagle (Binomial)** data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes.
 
 You will fit generalized linear models with:
 
-- one **numeric predictor** and a **four-level categorical predictor** using to the mallard data (**Bernoulli GLM**)
+- one **numeric predictor** and a **four-level categorical predictor** using the mallard data (**Bernoulli GLM**)
 - three **two-level categorical predictors** using the bald eagle data (**Binomial GLM**)
-- three **numeric predictors** using the Galápagos plant richness data (**Poisson GLM**)
 
-You will use function `glm()` for all analyses.
+You will use function `glm()` in both analyses.
 
 ----
 
@@ -36,27 +35,26 @@ You will use function `glm()` for all analyses.
 
 ### Tutorial Dataset: Mallard nesting success
 
-The `mallard` data frame is available from R package [RMark](https://github.com/jlaake/RMark), which provides an interface for fitting various type of **capture-recapture models** (advanced models not covered in this course that use GLMs as their building blocks) in program [MARK](http://www.phidot.org/software/mark/). The full data set was analyzed by [Stephens et al. (2005)](https://doi.org/10.1890/04-1162). Here you will analyze a subset of the data that focuses on the nesting success of mallards (*Ana platyrhynchos*) using a Bernoulli GLM. The goal is to determine if nest **failure** (abandoned or depredated) is related to the proportion of grass covering the study area (*numeric* variable `PpnGrass`) and habitat (*categorical* variable with four levels: `Habitat`; see [data dictionary](add link) for details about each habitat) where a nest was found. The `Fate` variable is *binary* and coded so that nest **success = 0** and nest **failure = 1**.
+The `mallard` data frame is available from R package [RMark](https://github.com/jlaake/RMark), which provides an interface for fitting various type of [capture-recapture models](https://en.wikipedia.org/wiki/Mark_and_recapture) (includes advanced models not covered in this course that use GLMs as their building blocks) in program [MARK](http://www.phidot.org/software/mark/). The full data set was analyzed by [Stephens et al. (2005)](https://doi.org/10.1890/04-1162). NOTE: Typically you'd have access to the `mallard` data by loading package RMark. But RMark installation in Posit Cloud throws an error. As some of you use Posit Cloud, we will proceed by reading in a CSV file containing the data that is packaged with this tutorial.
+
+Here you will analyze a subset of the data that focuses on the nesting success of mallards (*Ana platyrhynchos*) using a Bernoulli GLM. The goal is to determine if nest **failure** (abandoned or depredated) is related to the proportion of grass covering the study area (*numeric* variable `PpnGrass`) and habitat (*categorical* variable with four levels: `Habitat`; see [data dictionary](https://eogmartins.github.io/biol325-labs/labs/lab09.html#data-dictionary)) for details about each habitat) where a nest was found. The `Fate` variable is *binary* and coded so that nest **success = 0** and nest **failure = 1**.
 
 ### Exercise 1.1: Load packages and wrangle the data
 
-First, you need to load the packages and data frame you will need. Differently from packages like **palmerpenguins**, the data provided with **RMark** is not automatically loaded when you load the package. You have to use base R function [data()](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/data) to load the `mallard` data frame.
+First, you need to load the packages and data frame you will need. Then you will do some wrangling of the data to create a new habitat variable. This is because the data frame is provided with each habitat category (in this order `Native`, `Planted`, `Roadside` and `Wetland`) in its own column, but we need them all in a single column. As all four habitat columns are binary-coded and mutually exclusive you **do not** need to use [pivot_longer()](https://tidyr.tidyverse.org/reference/pivot_longer.html) though. 
 
-Then you will do some wrangling of the data to create a new habitat variable. This is because the data frame is provided with each habitat category (in this order `Native`, `Planted`, `Roadside` and `Wetland`) in its own column, but we need them all in a single column. As all four habitat columns are binary-coded and mutually exclusive you **do not** need to use [pivot_longer()](https://tidyr.tidyverse.org/reference/pivot_longer.html) though. 
+You will just  collapse the habitats into a single `Habitat` factor (as you will see in the code below) using function [case_when()](https://dplyr.tidyverse.org/reference/case-and-replace-when.html). This function allows you to create a new variable by evaluating a series of logical conditions and assigning a value based on which condition is met. It works like a vectorized *if–else* statement, where each row is checked against the specified conditions in order, and the first true condition determines the value assigned.
 
-You will just  collapse the habitats into a single factor `Habitat` (as you will see in the code below) using function [case_when()](https://dplyr.tidyverse.org/reference/case-and-replace-when.html).This function allows you to create a new variable by evaluating a series of logical conditions and assigning a value based on which condition is met. It works like a vectorized “if–else” statement, where each row is checked against the specified conditions in order, and the first true condition determines the value assigned.
-
-**Your Turn:** Just examine the code below to understand the process of loading data from a package and some new data wrangling techniques. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
+**Your Turn:** Just examine the code below to load packages, read in the data, and learn some new data wrangling techniques. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
 
 ```{r mallard_prep, exercise = TRUE, exercise.eval = FALSE, exercise.lines = 25}
 # Load packages
 library(tidyverse)
-library(RMark)
 library(DHARMa)
 
 # Load and inspect original data
-data(mallard)
-head(mallard)
+mallard <- read_csv("data/mallard.csv")
+mallard
 
 # Wrangle mallard
 mallard_clean <- as_tibble(mallard) |>
@@ -85,7 +83,7 @@ grade_this({
 
 Let's inspect the new data frame and take a look at the summary of the data as usual (there are no issues with these data).
 
-**Your Turn:** Write code to see print and summarize the data frame `mallard_clean`.
+**Your Turn:** Write code to see and summarize the data frame `mallard_clean`.
 
 ```{r mallard_inspect, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_prep"}
 ```
@@ -113,9 +111,9 @@ grade_this_code(
 
 ### Exercise 1.3: Visualize the data
 
-Before fitting a model, let's take a look at how fate is distributed across habitats and relates to the proportion of grass coverage in the study areas.
+Before fitting a model, let's take a look at how fate is distributed across habitats and relates to the proportion of grass cover in the study areas.
 
-**Your Turn:** Replace the blanks (`____`) with the required code to make a boxplot. You want the nest fate (`Fate`) on the x-axis and the proportion of grass coverage (`PpnGrass`) on the y-axis. Also, your code must assign aesthetic colour to `Fate` and make a panel for each habitat (`Habitat`).
+**Your Turn:** Replace the blanks (`____`) with the required code to make a boxplot. You want the nest fate (`Fate`) on the x-axis and the proportion of grass cover (`PpnGrass`) on the y-axis. Also, your code must assign aesthetic colour to `Fate` and make a panel for each habitat (`Habitat`).
 
 ```{r mallard_boxplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_prep", exercise.lines = 15}
 mallard_clean |>
@@ -169,7 +167,7 @@ mallard_clean |>
 
 ```{r mallard_boxplot-check}
 grade_this_code(
-  correct = "Examine the plot. It gives you a quick visual sense of whether fate depends on habitat and proportion of grass coverage in the study area. Can you identify any signs of potential interactions between `Habitat` and `PpnGrass`?"
+  correct = "Examine the plot. It gives you a quick visual sense of whether fate depends on habitat and proportion of grass cover in the study area. Can you identify any signs of potential interactions between `Habitat` and `PpnGrass`?"
 )
 ```
 
@@ -177,7 +175,7 @@ grade_this_code(
 
 You will now fit the Bernoulli GLM with the base R function [glm()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/glm). Its use is very similar to that of function [lm()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/lm), which you learned about in the previous labs. 
 
-One important thing to include in the `glm()` call is a value for the argument [family](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/family), which is where you tell R whether you want to fit a Bernoulli / Binomial or Poisson GLM (among others we won't cover in the course). As the Bernoulli distribution is a special case of the Binomial with sample size parameter equal 1, to fit a Bernoulli GLM you will use `family = binomial` (no need for quotation marks or to indicate the link function, as by default it uses the [logit](https://en.wikipedia.org/wiki/Logit) link)
+One important thing to include in the `glm()` call is a value for the argument [family](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/family), which is where you tell R whether you want to fit a Bernoulli / Binomial or Poisson GLM (among others we won't cover in the course). As the Bernoulli distribution is a special case of the Binomial with sample size parameter equal 1, to fit a Bernoulli GLM you will use `family = binomial` (no need for quotation marks or to indicate the link function as seen in the lectures, as by default it uses the [logit](https://en.wikipedia.org/wiki/Logit) link for `family = binomial`)
 
 In R, the Bernoulli GLM with an interaction between `PpnGrass` and `Habitat` is fit with the following command:
 
@@ -232,7 +230,7 @@ grade_this(
 \n
 The residuals vs. predicted plot shows no clear pattern, which suggests the mean structure (linear predictor) and link function are appropriate.
 \n
-The dispersion is approximately 1 (*P* = 0.904) and the SD of observed residuals falls within the core of the distributuon of the SD of simulated residuals, indicating no over- (more variability in the data than can be accomodated by Bernoulli) or underdispersion (less variability in the data than can be accommodated by Bernoulli).
+The dispersion is approximately 1 (*P* = 0.904) and the SD of observed residuals falls within the core of the distribution of the SD of simulated residuals, indicating no over- (more variability in the data than can be accomodated by Bernoulli) or underdispersion (less variability in the data than is expected by Bernoulli).
 \n
 Overall, these diagnostics suggest the model you fitted can reproduce the mallard data well, so we have no evidence that the GLM assumptions were violated.")
 )
@@ -274,7 +272,7 @@ mod_mallard_main <- glm(Fate ~ PpnGrass + Habitat, family = binomial, data = mal
 
 **Your Turn:** Replace the blanks (`____`) with the required code to fit the main effects only model. Assign the output of `glm()` to a variable named `mod_mallard_main`.
 
-NOTE: There is a bug in learnr that throws an error when we try to make the residual vs fitted plot in the tutorial. For this reason, you'll run a new function, [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
+NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual vs fitted plot using the simulated residuals from this model. For this reason, you'll run a new function, [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity), to see the QQ-plot only.
 
 ```{r mallard_fit_check_main, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_prep"}
 # Fit model
@@ -311,7 +309,7 @@ testDispersion(res_mallard_main)
 
 ```{r mallard_fit_check_main-check}
 grade_this_code(
-  correct = "This main effects only model also adequately fit the data. Now let's formally compare it to the interaction model."
+  correct = "This main effects only model also adequately fits the data. Now let's formally compare it to the interaction model."
 )
 ```
 
@@ -367,7 +365,7 @@ grade_this_code(
 \n
 The **intercept** represents the expected **log-odds** for the reference level (`Native`) when `PpnGrass` is zero.
 \n
-The slope of `PpnGrass` represents the change in **log-odds** of failure for a unit change in proportion of grass coverage. 
+The slope of `PpnGrass` represents the change in **log-odds** of failure for a unit change in proportion of grass cover. 
 \n
 The effect of each non-reference habitat (`Planted`, ` Roadside`, and `Wetland`) represents a change in **log-odds** of failure in that habitat in relation to the reference habitat (`Native`)."
 )
@@ -394,7 +392,7 @@ quiz(
 
 As you may have noticed, interpreting the Bernoulli GLM directly from its coefficients can be challenging because they are expressed on the log-odds (logit) scale. Instead, a more intuitive approach is to examine the model’s predicted probabilities of nest failure, which allow us to understand how the response changes across predictor values in a meaningful way.
 
-To do this, we first create a new data frame (`pred_grid`) with prediction grid that contains a sequence of values for `PpnGrass` spanning its observed range, combined with all levels of `Habitat`. This allows us to generate predictions across the full gradient of `PpnGrass` for each habitat type. Examine the commands below to create this prediction grid.
+To do this, we first create a new data frame (`pred_grid`) with a prediction grid that contains a sequence of values for `PpnGrass` spanning its observed range, combined with all levels of `Habitat`. This allows us to generate predictions across the full gradient of `PpnGrass` for each habitat type. Examine the commands below to create this prediction grid.
 
 ```r
 pred_grid <- expand.grid(
@@ -413,7 +411,7 @@ pred_link <- predict(mod_main, newdata = pred_grid, type = "link", se.fit = TRUE
 
 Importantly, the confidence intervals **must** be calculated on the logit scale, where the model is linear and the standard errors are defined. We construct these intervals by adding and subtracting 1.96 times the standard error from the fitted values. 
 
-Finally, we transform the fitted values and the confidence limits back to the probability scale using the inverse logit function [plogis()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/Logistic). This gives us the predicted probability of nest failure (`fit`), along with lower (`lwr`) and upper (`upr`) 95% confidence intervals that can be more easily interpreted and visualized.
+Finally, we transform the fitted values and the confidence limits to the probability scale using the inverse logit function [plogis()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/Logistic). This gives us the predicted probability of nest failure (`fit`), along with lower (`lwr`) and upper (`upr`) 95% confidence intervals that can be more easily interpreted and visualized.
 
 Examine the commands below.
 
@@ -428,7 +426,7 @@ pred_grid <- pred_grid |>
 
 **Your Turn:** The codes you examined above are included in the R Code box below. Just press **Submit Answer** to compute predicted probabilities of nest failures and their 95% confidence interval by `PpnGrass` and `Habitat`.
 
-```{r mallard_predict, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_compare_models_setup"}
+```{r mallard_predict, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_compare_models_setup", exercise.lines = 18}
 pred_grid <- expand.grid(
   PpnGrass = seq(min(mallard_clean$PpnGrass),
                  max(mallard_clean$PpnGrass),
@@ -456,11 +454,11 @@ grade_this(
 
 ### Exercise 1.11: Visualize model predictions
 
-You will now plot the nest failure predictions by grass cover and habitat, along with the binary observations of failure and successs. Because of the binary nature of fate, many observations share the exact same y-values (i.e. either 0 or 1). If plotted directly, these points would overlap heavily, making it difficult to see how many observations occur at each value. To address this, we use [geom_jitter()](https://ggplot2.tidyverse.org/reference/geom_jitter.html) to add a small amount of vertical noise to the points. This does not change the data, but spreads the points slightly so their density and distribution become visible, allowing you to better compare the observed data with the model predictions.
+You will now plot the nest failure predictions by grass cover and habitat, along with the binary observations of failure and successs. Because of the binary nature of fate, many observations share the exact same y-values (i.e., either 0 or 1). If plotted directly, these points would overlap heavily, making it difficult to see how many observations occur at each value. To address this, we use [geom_jitter()](https://ggplot2.tidyverse.org/reference/geom_jitter.html) to add a small amount of vertical noise to the points. This does not change the data, but spreads the points slightly so their density and distribution become visible, allowing you to better compare the observed data with the model predictions.
 
 **Your Turn:** Replace the blanks (`____`) with the required code to make the plot. Use `Habitat` as a faceting variable.
 
-```{r mallard_plot_predictions, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_predict"}
+```{r mallard_plot_predictions, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "mallard_predict", exercise.lines = 15}
 ggplot(____, aes(x = ____, y = ____)) +
   geom_ribbon(aes(ymin = ____, ymax = ____), alpha = 0.15, color = NA) +
   geom_line(linewidth = 1) +
@@ -516,13 +514,13 @@ grade_this_code(
 The `eagles` data frame is available from R package [MASS](https://cran.r-project.org/web/packages/MASS/index.html), which 
 includes data and functions associated with the book [Modern Applied Statistics with S](https://link.springer.com/book/10.1007/978-0-387-21706-2) by W. N. Venables and B. D. Ripley. 
 
-The data set was originally used in the publications by [Knight and Skagen (1988)](https://esajournals.onlinelibrary.wiley.com/doi/10.2307/1941273).Their goal was to investigate the factors influencing kleptoparasitic behaviour in bald eagles (*Haliaeetus leucocephalus*), specifically examining how the size (variable `P`) and age (variable `A`) of the pirate eagle and the size (variable `V`) of the victim eagle affect the probability of a successful food-stealing attempt. The response variable in the data set is the number of successul food-setaling attempts (variable `y`) out of the total number of attempts (variable `n`). Here, you will analyze their data using a Binomial GLM.
+The data set was originally used in the publications by [Knight and Skagen (1988)](https://esajournals.onlinelibrary.wiley.com/doi/10.2307/1941273).Their goal was to investigate the factors influencing kleptoparasitic behaviour in bald eagles (*Haliaeetus leucocephalus*), specifically examining how the size (variable `P`) and age (variable `A`) of the pirate eagle and the size (variable `V`) of the victim eagle affect the probability of a successful food-stealing attempt. The response variable in the data set is the number of successful food-stealing attempts (variable `y`) out of the total number of attempts (variable `n`). Here, you will analyze their data using a Binomial GLM.
 
 ### Exercise 2.1: Load packages and wrangle the data
 
 First, you need to load the packages you will need. The `eagles` dataset is automatically loaded when the `MASS` package loads, so you don't need to use function `data()` like in the previous section.
 
-You will do some wrangling to learn how to re-level (change the order) and re-label the levels of a factor, as well as to compute the proportion of successful food-stealing attemps for exploring the data graphically (this proportion will not be used in the analysis).
+You will do some wrangling to learn how to re-level (change the order) and re-label the levels of a factor, as well as to compute the proportion of successful food-stealing attempts for exploring the data graphically (this proportion will not be used in the analysis).
 
 **Your Turn:** Just examine the code below to understand the process of re-leveling and labeling a factor variable. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
 
@@ -586,14 +584,14 @@ grade_this_code(
 
 ### Exercise 2.3: Visualize the data
 
-Before fitting a model, let's take a look at how the proportion of success food-stealing attempts is related to pirate size and age, and victim size. This proportion is directly related to the per-attempt probability of successfully stealing food that you will model with the Binomial GLM.
+Before fitting a model, let's take a look at how the proportion of successful food-stealing attempts is related to pirate size and age, and victim size. This proportion is directly related to the per-attempt probability of successfully stealing food that you will model with the Binomial GLM.
 
 You will make what is known as an **interaction plot**, which is designed to visualize whether the effect of one predictor (e.g., pirate eagle size) depends on the level of another predictor (e.g., age class). Here, you will do interaction plots stratified by levels of a third factor (victim size via facets). Don't worry about the fancy plot name: it's just a glorified point and line plot made with a `geom_point()` and `geom_line()` in ggplot.
 
-**Your Turn:** Replace the blanks (`____`) with the required code to make the interaction plot the proportion of successful food stealing attempts (`prop` on the y-axis) by age class size (`A` mapped to aesthetics `colour` and `group` ) and prirate size (`P` on the x-axis), faceted by victim size (`V`).
+**Your Turn:** Replace the blanks (`____`) with the required code to make the interaction plot of the proportion of successful food stealing attempts (`prop` on the y-axis) by age class size (`A` mapped to aesthetics `colour` and `group` ) and pirate size (`P` on the x-axis), faceted by victim size (`V`).
 
 
-```{r eagles_plot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_prep"}
+```{r eagles_plot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_prep", exercise.lines = 18}
 ____ |>
 ggplot(aes(x = ____, y = ____, color = ____, group = ____)) +
   ____(linewidth = 0.8, linetype = "dashed", 
@@ -664,7 +662,7 @@ You will fit the same model the authors of the original publication used, which 
 mod_eagles_inter <- glm(cbind(y, n - y) ~ P * A + V, family = binomial, data = eagles_clean)
 ```
 
-Note the response term (i.e. the term before `~`). For a Binomial GLM, you have to provide `glm()` the response as a matrix containing the number of successes and the number of failures, in this order. This is achieved with function [cbind()](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/cbind) to combine the number of successful food-stealing attemps (`y`) and the number of failed attempts (`n - y`, the the total number of attempts minus the number of successful ones).
+Note the response term (i.e., the term before `~`). For a Binomial GLM, you have to provide `glm()` the response as a matrix containing the number of successes and the number of failures, in this order. This is achieved with function [cbind()](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/cbind) to combine the number of successful food-stealing attemps (`y`) and the number of failed attempts (`n - y`, the the total number of attempts minus the number of successful ones).
 
 Also, note that internally R will expand `P * A + V` to `P + A + V + P:A`.
 
@@ -696,7 +694,7 @@ Before you look at the model parameter estimates, you have to ensure that the mo
 
 **Your Turn:** Replace the blanks (`____`) with the required functions of the package DHARMa to check the fit of the model.
 
-NOTE: There is a bug in learnr that throws an error when we try to make the residual vs fitted plot in the tutorial. For this reason, you'll run function, [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
+NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual vs fitted plot using the simulated residuals from this model. For this reason, you'll run function [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
 
 ```{r eagles_fitted_inter, exercise.setup = "eagles_prep"}
 mod_eagles_inter <- glm(cbind(y, n - y) ~ P * A + V, family = binomial, data = eagles_clean)
@@ -765,7 +763,7 @@ To make sure the interaction term is important, we'll compare the model with the
 
 **Your Turn:** Replace the blanks (`____`) with the required code to fit the main effects only model. Assign the output of `glm()` to a variable named `mod_eagles_main`.
 
-NOTE: There is a bug in learnr that throws an error when we try to make the residual vs fitted plot in the tutorial. For this reason, you'll run function, [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
+NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual vs fitted plot using the simulated residuals from this model. For this reason, you'll run function [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
 
 ```{r eagles_fit_check_main, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_prep"}
 # Fit model
@@ -838,11 +836,11 @@ grade_this(
 
 ### Exercise 2.9: Compute model predictions
 
-You can go back to Exercise 2.6 to see a summary of the interaction model with the coefficient estimates. But as you may recall, interpreting a Binomial GLM directly from its coefficients can be challenging because they are expressed on the log-odds (logit) scale. Furthremore, it gets even mroe challenging when the model includes interactions. So let's create predictions from the model that we can plot in the next exercise to help us interpret the results.
+You can go back to Exercise 2.6 to see a summary of the interaction model with the coefficient estimates. But as you may recall, interpreting a Binomial GLM directly from its coefficients can be challenging because they are expressed on the log-odds (logit) scale. Furthermore, it gets even more challenging when the model includes interactions. So let's create predictions from the model that we can plot in the next exercise to help us interpret the results.
 
-**Your Turn:** Replace the blanks (`____`) with the required code to create a data frame with a grid for predictions, compute predictions and their SE from the model output in the link scale, then transform them to the porbability scale using the inverse logit function.
+**Your Turn:** Replace the blanks (`____`) with the required code to create a data frame with a grid of predictor values, compute predictions and their SEs, in the logit link scale, from the model output and this predictor grid, then transform them to the probability scale using the inverse logit function.
 
-```{r eagles_predict, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_compare_models_setup"}
+```{r eagles_predict, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_compare_models_setup", exercise.lines = 18}
 pred_grid <- expand_grid(
   P = factor(levels(eagles_clean$P), levels = levels(eagles_clean$P)),
   A = factor(____, levels = ____),
@@ -926,7 +924,7 @@ pred_grid <- pred_grid |>
 pred_grid
 ```
 
-```{r eagles_plot_predictions, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_plot_predictions_setup"}
+```{r eagles_plot_predictions, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "eagles_plot_predictions_setup", exercise.lines = 18}
 ggplot(____, aes(x = ____, y = ____, color = ____, group = ____)) +
   geom_errorbar(aes(ymin = ____, ymax = ____),
                 width = 0.15, position = position_dodge(0.3)) +
@@ -986,6 +984,4 @@ Does this match what you observed in the raw proportions, and do the uncertainty
 
 ### 
 
-You have completed this tutorial. We won't go over the Poisson GLM with the Galápagos data set in this lab. We'll get to it in the next lab, where you will end its analysis using random effects (to be covered in class this week) to address the poor fit of the Poisson GLM to the data, as seen in the lectures last week.
-
-For now, check out this lab's instructions web page for additional learning material on generalized linear models in R. There are NO assignments this week!
+You have completed this tutorial. We won't go over a Poisson GLM in this lab. For now, check out this lab's instructions web page for additional learning material on generalized linear models in R. There are NO assignments this week!
