@@ -20,7 +20,7 @@ library(gradethis)
 
 ## 1. Introduction
 
-In this lab, you will learn how to fit Bernoulli and Binomial generalized linear models (GLM) to data as well as assess the model fit and interpret the results. We'll work with the **mallard (Bernoulli)** and **bald eagle (Binomial)** data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes.
+In this lab, you will learn how to fit Bernoulli and Binomial generalized linear models (GLM) to data as well as assess the model fit and interpret the results. You'll work with the **mallard (Bernoulli)** and **bald eagle (Binomial)** data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes.
 
 You will fit generalized linear models with:
 
@@ -175,9 +175,23 @@ grade_this_code(
 
 You will now fit the Bernoulli GLM with the base R function [glm()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/glm). Its use is very similar to that of function [lm()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/lm), which you learned about in the previous labs. 
 
-One important thing to include in the `glm()` call is a value for the argument [family](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/family), which is where you tell R whether you want to fit a Bernoulli / Binomial or Poisson GLM (among others we won't cover in the course). As the Bernoulli distribution is a special case of the Binomial with sample size parameter equal 1, to fit a Bernoulli GLM you will use `family = binomial` (no need for quotation marks or to indicate the link function as seen in the lectures, as by default it uses the [logit](https://en.wikipedia.org/wiki/Logit) link for `family = binomial`)
+One important thing to include in the `glm()` call is a value for the argument [family](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/family), which is where you tell R whether you want to fit a Bernoulli / Binomial or Poisson GLM (among others we won't cover in the course). As the Bernoulli distribution is a special case of the Binomial with sample size parameter equal 1, to fit a Bernoulli GLM you will use `family = binomial` (no need for quotation marks or to indicate the link function as seen in the lectures, as by default it uses the [logit](https://en.wikipedia.org/wiki/Logit) link for `family = binomial`).
 
-In R, the Bernoulli GLM with an interaction between `PpnGrass` and `Habitat` is fit with the following command:
+The Bernoulli GLM with an interaction between `PpnGrass` and `Habitat` is:
+
+The model is:
+
+$$\text{Fate}_i \sim \text{Bernoulli}(p_i)$$
+\ 
+
+$$\text{logit}(p_i) = \beta_0 + \beta_1 \cdot \text{PPnGrass}_{i} + 
+\beta_2 \cdot \text{Planted}_{i} + 
+\beta_3 \cdot \text{Roadside}_{i} + 
+\beta_4 \cdot \text{Wetland}_{i} +
+\beta_5\cdot \text{PpnGrass}_{i} \cdot \text{Planted}_{i} +
+\beta_5\cdot \text{PpnGrass}_{i} \cdot \text{Roadside}_{i} +
+\beta_5\cdot \text{PpnGrass}_{i} \cdot \text{Wetland}_{i}$$ 
+In R, this Bernoulli GLM is fit with the following command:
 
 ```r
 mod_mallard_inter <- glm(Fate ~ PpnGrass * Habitat, family = binomial, data = mallard_clean)
@@ -264,7 +278,18 @@ grade_this_code(
 
 You will now fit and check a model without the interaction term (main effects only). After we check the model, we will compare it to the interaction model in the next exercise.
 
-In R, the Bernoulli GLM *without* an interaction between `PpnGrass` and `Habitat` is fit with the following command:
+
+The Bernoulli GLM with with main effect `PpnGrass` and `Habitat` only is:
+
+$$\text{Fate}_i \sim \text{Bernoulli}(p_i)$$
+\ 
+
+$$\text{logit}(p_i) = \beta_0 + \beta_1 \cdot \text{PPnGrass}_{i} + 
+\beta_2 \cdot \text{Planted}_{i} + 
+\beta_3 \cdot \text{Roadside}_{i} + 
+\beta_4 \cdot \text{Wetland}_{i}$$
+
+In R, this Bernoulli GLM is fit with the following command:
 
 ```r
 mod_mallard_main <- glm(Fate ~ PpnGrass + Habitat, family = binomial, data = mallard_clean)
@@ -654,9 +679,26 @@ Pay particular attention to the lines within each panel. Do they appear parallel
 
 ### Exercise 2.4: Fit the model with interaction
 
-You will now fit the Binomial GLM with the base R function `glm()`. Just like you did with the Bernoulli GLM in the previous section, you have to set `family = binomial`.
+You will now fit the Binomial GLM with the base R function `glm()`. Just like you did with the Bernoulli GLM in the previous section, you have to set `family = binomial(link = "logit")` (you can just write `family = binomial` because the logit link is the default for Binomial GLMs in R). This tells R to:
 
-You will fit the same model the authors of the original publication used, which included all three main effects (`P`, `A`, and `V`) as well as an interaction between `P` and `A`. In R, this Binomial GLM is fit with the following command:
+1. Model the **logit** of the expected odds as a linear function of the predictors.
+2. Assume the response (successful food-stealing attempts) follows a **Binomial distribution**, which means the variance is assumed to equal the $np(1-p)$.
+
+You will fit the same model the authors of the original publication used, which included all three main effects (`P`, `A`, and `V`) as well as an interaction between `P` and `A`. 
+
+The model is:
+
+$$y_i \sim \text{Binomial}(n_i, p_i)$$
+\ 
+
+$$\text{logit}(p_i) = \beta_0 + \beta_1 \cdot \text{P}_{i} + \beta_2 \cdot \text{A}_{i} + \beta_3 \cdot \text{V}_{i} + \beta_4 \cdot \text{P}_{i} \cdot \text{A}_{i}$$
+In R, this Binomial GLM is fit with the following command:
+
+```r
+mod_gala_glm <- glm(Species ~ lnArea + lnNearest, family = poisson, data = gala)  
+```
+
+In R, this Binomial GLM is fit with the following command:
 
 ```r
 mod_eagles_inter <- glm(cbind(y, n - y) ~ P * A + V, family = binomial, data = eagles_clean)
@@ -760,6 +802,14 @@ grade_this_code(
 ### Exercise 2.7: Fit and check model without interaction
 
 To make sure the interaction term is important, we'll compare the model with the interaction against one without it in the next exercise. So here let's fit and check the model without the interaction (main effects only).
+
+The Binomial GLM with with main effects only is:
+
+$$y_i \sim \text{Binomial}(n_i, p_i)$$
+\ 
+
+$$\text{logit}(p_i) = \beta_0 + \beta_1 \cdot \text{P}_{i} + \beta_2 \cdot \text{A}_{i} + \beta_3 \cdot \text{V}_{i}$$
+
 
 **Your Turn:** Replace the blanks (`____`) with the required code to fit the main effects only model. Assign the output of `glm()` to a variable named `mod_eagles_main`.
 
