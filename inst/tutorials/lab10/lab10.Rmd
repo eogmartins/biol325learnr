@@ -1,0 +1,1236 @@
+---
+title: "Generalized Linear Mixed Models"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+library(learnr)
+library(gradethis)
+```
+
+```{r setup_gala, include = FALSE}
+library(tidyverse)
+library(faraway)
+library(glmmTMB)
+library(DHARMa)
+
+theme_set(theme_minimal(base_size = 13))
+
+gala_clean <- gala |>
+  rownames_to_column(var = "Island") |>
+  select(Island, Species, Area, Nearest) |>
+  mutate(
+    lnArea    = log(Area),
+    lnNearest = log(Nearest)
+  )
+```
+
+```{r setup_panda, include = FALSE}
+library(tidyverse)
+library(ecoteach)
+library(glmmTMB)
+library(DHARMa)
+
+theme_set(theme_minimal(base_size = 13))
+
+data("redpanda_moves", package = "ecoteach")
+
+redpanda_clean <- redpanda_moves |>
+  mutate(lnDistance = log(Distance))
+```
+
+```{r gala_glm_ready, include = FALSE}
+library(tidyverse)
+library(faraway)
+library(glmmTMB)
+library(DHARMa)
+
+theme_set(theme_minimal(base_size = 13))
+
+gala_clean <- gala |>
+  rownames_to_column(var = "Island") |>
+  select(Island, Species, Area, Nearest) |>
+  mutate(
+    lnArea    = log(Area),
+    lnNearest = log(Nearest)
+  )
+
+mod_gala_glm <- glm(Species ~ lnArea + lnNearest,
+                    data   = gala_clean,
+                    family = poisson(link = "log"))
+```
+
+```{r gala_olre_ready, include = FALSE}
+library(tidyverse)
+library(faraway)
+library(glmmTMB)
+library(DHARMa)
+
+theme_set(theme_minimal(base_size = 13))
+
+gala_clean <- gala |>
+  rownames_to_column(var = "Island") |>
+  select(Island, Species, Area, Nearest) |>
+  mutate(
+    lnArea    = log(Area),
+    lnNearest = log(Nearest)
+  )
+
+mod_gala_glm <- glm(Species ~ lnArea + lnNearest,
+                    data   = gala_clean,
+                    family = poisson(link = "log"))
+
+mod_gala_olre <- glmmTMB(Species ~ lnArea + lnNearest + (1 | Island),
+                          data   = gala_clean,
+                          family = poisson(link = "log"))
+```
+
+```{r panda_fixed_ready, include = FALSE}
+library(tidyverse)
+library(ecoteach)
+library(glmmTMB)
+library(DHARMa)
+
+theme_set(theme_minimal(base_size = 13))
+
+data("redpanda_moves", package = "ecoteach")
+
+redpanda_clean <- redpanda_moves |>
+  mutate(lnDistance = log(Distance))
+
+mod_fixed <- glmmTMB(lnDistance ~ Snow_cover * Sex,
+                     data = redpanda_clean)
+```
+
+```{r panda_ri_ready, include = FALSE}
+library(tidyverse)
+library(ecoteach)
+library(glmmTMB)
+library(DHARMa)
+
+theme_set(theme_minimal(base_size = 13))
+
+data("redpanda_moves", package = "ecoteach")
+
+redpanda_clean <- redpanda_moves |>
+  mutate(lnDistance = log(Distance))
+
+mod_fixed <- glmmTMB(lnDistance ~ Snow_cover * Sex,
+                     data = redpanda_clean)
+
+mod_ri <- glmmTMB(lnDistance ~ Snow_cover * Sex + (1 | Animal_Id),
+                  data = redpanda_clean)
+```
+
+
+## 1. Introduction
+
+In this lab you will learn how to fit, assess, and interpret generalized linear mixed models (GLMMs). Mixed models extend the generalized linear models (GLMs) you already know by adding **random effects**, which are terms that account for structure in the data that would otherwise be ignored.
+
+You'll work with the **Galápagos plant species richness (Poisson)** and **red panda movement (Normal, also known as Gaussian)** data sets presented in the lectures, so the data and findings will be familiar to you and you can focus on the implementation of the codes.
+
+You will work with these two data sets because each highlight a different reason for using random effects:
+
+- **Plant species richness on the Galápagos Islands**: a Poisson GLM is fitted first, and diagnostics reveal that the data are more variable (**overdispersed**) than can be accommodate by the Poisson variance. You will then extend the model by adding an **observation-level random effect** (OLRE) to absorb the extra-Poisson variability.
+
+- **Daily movement distances of red pandas**: a fixed-effects Gaussian model is fitted first, and diagnostics reveal evidence of **non-independence** caused by repeated measurements on the same individuals. You will then add a and **individual-level random effect** to account for the correlated nature of observations from the same individual.
+
+### What are random effects?
+
+A **random effect** is a model term whose levels are treated as a random sample from a larger population of possible levels, rather than as a fixed set of categories you want to make specific inferences about. In practice, this lets the model:
+
+1. **Borrow strength across groups**: Estimates for groups with little data are partially pooled toward the overall mean, reducing extreme estimates driven mainly by small sample size. This is often called shrinkage.
+2. **Partition variance**: Random effects allow you to separate variation among groups from variation within groups. In random-intercept models, this also lets you quantify how strongly observations from the same group resemble one another using the intra-class correlation (ICC).
+3. **Account for non-independence**: If observations within groups are correlated and we ignore that, we usually underestimate the uncertainty in the fixed effects. Random effects account for this dependence, leading to more reliable standard error estimates and inference.
+
+----
+
+## 2. Poisson GLM and GLMM
+
+### Tutorial dataset: Galápagos Islands plant richness
+
+The `gala` data frame is available from from the R package [faraway](https://cran.r-project.org/package=faraway), which includes data and functions associated with the books [Linear Models with R](https://www.routledge.com/Linear-Models-with-R/Faraway/p/book/9781032583983) and [Extending the Linear Model with R](https://www.routledge.com/Extending-the-Linear-Model-with-R-Generalized-Linear-Mixed-Effects-and-Nonparametric-Regression-Models-Second-Edition/Faraway/p/book/9781498720960) by Julian Faraway.
+
+The data set was originally used in the publication by [Johnson and Raven (1973)](https://www.science.org/doi/10.1126/science.179.4076.893). Their goal was to re-analyze the relationship between plant species richness in the Galápagos Islands and various predictors with a new data set available at the time. It and contains counts of plant species recorded on 30 islands of the Galápagos Archipelago (each row is includes observations from one island). 
+
+The response variable is species counts, which are non-negative integers. This makes the Poisson the natural distribution for the GLM. In this tutorial, we will focus on two predictors: `Area` (the area of the island in km²) and `Nearest` (the distance from the nearest island in km). The original data set includes other predictors (including `Elevation` that, as we saw in the lecture, is highly correlated to `Area`) that we will ignore to keep the analysis simple and focused on teaching you the workflow of working with a Poisson GLM and using observation-level random effects to address overdispersion.
+
+The research question you will address is: 
+
+> Does plant species richness on a Galápagos island depend on the island's area and its distance from its nearest neighbour? 
+
+You will fit the Poisson GLM to address this question, check its assumptions, discover a problem called *overdispersion*, and then fix it with a GLMM.
+
+----
+
+### Exercise 2.1: Load packages and prepare the data
+
+The `gala` data frame is loaded automatically when you load **faraway**. One feature of `gala` is that the island names are stored as *row names* rather than as a regular column. The function [rownames_to_column()](https://tibble.tidyverse.org/reference/rownames.html) converts them into a proper column named `Island`. You will then select the four variables you need and log-transform `Area` and `Nearest`.
+
+**Your Turn:** Replace the blanks (`____`) to load the packages, convert the row names to a column called `Island`, select only the four needed variables (`Island`, `Species`, `Area`, and `Nearest`), and create `lnArea` and `lnNearest` with [log](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/log). Assign the result to `gala_clean`.
+
+```{r gala_prep, exercise = TRUE, exercise.eval = FALSE, exercise.lines = 17}
+# Load packages
+library(tidyverse)
+library(faraway)
+library(glmmTMB)
+library(DHARMa)
+
+# Prepare the data
+gala_clean <- gala |>
+  rownames_to_column(var = ____) |>
+  select(____, ____, ____, ____) |>
+  mutate(
+    lnArea    = log(____),
+    lnNearest = log(____)
+  )
+
+# Inspect the clean data frame
+gala_clean
+```
+
+```{r gala_prep-hint-1}
+# rownames_to_column() takes one argument: the name
+# you want to give to the new column (as a string).
+# Use var = "Island"
+```
+
+```{r gala_prep-hint-2}
+# select() the four columns: Island, Species, Area, Nearest
+# (in that order, to match the solution)
+```
+
+```{r gala_prep-hint-3}
+gala_clean <- gala |>
+  rownames_to_column(var = "Island") |>
+  select(Island, Species, Area, Nearest) |>
+  mutate(
+    lnArea    = log(____),
+    lnNearest = log(____)
+  )
+```
+
+```{r gala_prep-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Load packages
+library(tidyverse)
+library(faraway)
+library(glmmTMB)
+library(DHARMa)
+
+# Prepare the data
+gala_clean <- gala |>
+  rownames_to_column(var = "Island") |>
+  select(Island, Species, Area, Nearest) |>
+  mutate(
+    lnArea    = log(Area),
+    lnNearest = log(Nearest)
+  )
+
+# Inspect the clean data frame
+gala_clean
+```
+
+```{r gala_prep-check}
+grade_this_code(
+  correct = "You now have a tidy data frame with 30 rows (one per island) and six columns. The `Island` column contains the island names, `Species` is the count of plant species (our response variable), and `lnArea` and `lnNearest` are the log-transformed predictors we will use in all models (we will just use `Area` and `Nearest` for data exploration)."
+)
+```
+
+### Exercise 2.2: Plot species richness vs. area and nearest-island distance
+
+Before fitting any model, it is important to look at the relationships between the response and each predictor. As we saw in the lecture, in this case, it's helpful to do that with predictors on both on the raw scale and on the log scale. You will also log transform the response, so you see it in the scale the model will be modeling the expected value.
+
+**Your Turn:** Replace the blanks to make two scatterplots: one with `Area` on the x-axis, and one with `lnArea` on the x-axis. Both must have `log(Species)` on the y-axis.
+
+```{r gala_plot_area, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_gala"}
+# Species vs Area (raw scale)
+ggplot(gala_clean, aes(x = ____, y = ____)) +
+  ____() +
+  xlab("Area (km²)") +
+  ylab("Number of species") +
+  theme_light()
+
+# Species vs lnArea (log scale)
+ggplot(gala_clean, aes(x = ____, y = ____)) +
+  ____() +
+  xlab("ln(Area)") +
+  ylab("ln(Number of species)") +
+  theme_light()
+```
+
+```{r gala_plot_area-hint}
+# For the first plot use Area, 
+# for the second use lnArea.
+```
+
+```{r gala_plot_area-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Species vs Area (raw scale)
+ggplot(gala_clean, aes(x = Area, y = log(Species))) +
+  geom_point() +
+  xlab("Area (km²)") +
+  ylab("Number of species") +
+  theme_light()
+
+# Species vs lnArea (log scale)
+ggplot(gala_clean, aes(x = lnArea, y = log(Species))) +
+  geom_point() +
+  xlab("ln(Area)") +
+  ylab("ln(Number of species)") +
+  theme_light()
+```
+
+```{r gala_plot_area-check}
+grade_this_code(
+  correct = "Compare the two plots carefully. On the raw scale for Area, a single very large island (Isabela) dominates the x-axis and the relationship is strongly curved, with most islands being squeezed into the left corner. On the log scale for Area the points spread out much more evenly and the relationship is approximately linear. This is the visual motivation for using `lnArea` as a predictor."
+)
+```
+
+### Exercise 2.3: Plot species richness vs. distance from nearest island
+
+**Your Turn:** Now make the same pair of plots for `Nearest` and `lnNearest`.
+
+```{r gala_plot_nearest, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_gala"}
+# Species vs Nearest (raw scale)
+ggplot(gala_clean, aes(x = ____, y = ____)) +
+  ____() +
+  xlab("Distance to nearest island (km)") +
+  ylab("ln(Number of species)") +
+  theme_light()
+
+# Species vs lnNearest (log scale)
+ggplot(gala_clean, aes(x = ____, y = ____)) +
+  ____() +
+  xlab("ln(Distance to nearest island)") +
+  ylab("ln(Number of species)") +
+  theme_light()
+```
+
+```{r gala_plot_nearest-hint}
+# Same pattern as in Exercise 2.2. 
+# Just swap Area for Nearest
+# and lnArea for lnNearest.
+```
+
+```{r gala_plot_nearest-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(gala_clean, aes(x = Nearest, y = log(Species))) +
+  geom_point() +
+  xlab("Distance to nearest island (km)") +
+  ylab("ln(Number of species)") +
+  theme_light()
+
+ggplot(gala_clean, aes(x = lnNearest, y = log(Species))) +
+  geom_point() +
+  xlab("ln(Distance to nearest island)") +
+  ylab("ln(Number of species)") +
+  theme_light()
+```
+
+```{r gala_plot_nearest-check}
+grade_this_code(
+  correct = "The log transform again spreads out the points more evenly along the x-axis. The relationship between species richness and distance is weaker/unclearer than for area."
+)
+```
+
+### Exercise 2.4: Fit the Poisson GLM
+
+Now you will fit the Poisson GLM with `lnArea` and `lnNearest` as predictors. In R, a Poisson GLM is fitted with `glm()` using `family = poisson(link = "log")` (you can just write `family = poisson` because the log link is the default for Poisson GLMs in R). This tells R to:
+
+1. Model the **log** of the expected species count as a linear function of the predictors.
+2. Assume the response (species count) follows a **Poisson distribution**, which means the variance is assumed to equal the mean.
+
+The model is :
+
+$$\text{Species}_{i} \sim \text{Poisson}(\lambda_i)$$
+\ 
+
+$$\log(\lambda_i) = \beta_0 + \beta_1 \cdot \text{lnArea}_{i} + \beta_2 \cdot \text{lnNearest}_{i}$$
+In R, this Poisson GLM is fit with the following command:
+
+```r
+mod_gala_glm <- glm(Species ~ lnArea + lnNearest, family = poisson, data = gala)  
+```
+
+**Your Turn:** Replace the blanks to fit the Poisson GLM. Assign it to `mod_gala_glm`.
+
+```{r gala_fit_glm, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_gala"}
+mod_gala_glm <- ____(Species ~ ____ + ____,
+                     data   = gala_clean,
+                     family = ____)
+```
+
+```{r gala_fit_glm-hint-1}
+# Use glm() with the formula Species ~ lnArea + lnNearest
+```
+
+```{r gala_fit_glm-hint-2}
+mod_gala_glm <- glm(Species ~ lnArea + lnNearest,
+                    data   = gala_clean,
+                    family = ____)
+```
+
+```{r gala_fit_glm-solution, exercise.reveal_solution = TRUE, include = FALSE}
+mod_gala_glm <- glm(Species ~ lnArea + lnNearest,
+                    data   = gala_clean,
+                    family = poisson)
+```
+
+```{r gala_fit_glm-check}
+grade_this_code(
+  correct = "The model has been successfully fitted and the output assigned to `mod_gala_glm`."
+)
+```
+
+### Exercise 2.5: Assess the Poisson GLM with DHARMa
+
+As we've seen in the lectures and the previous lab, ordinary residuals are not appropriate for checking GLMs. Instead, you will use the **DHARMa** package, which works by simulating many data sets from the fitted model and comparing the observed data to those simulations. Under a correctly specified model, the resulting *quantile residuals* follow a Uniform(0, 1) distribution.
+
+**Your Turn:** Replace the blanks to simulate quantile residuals from `mod_gala_glm` and then plot them on a QQ-plot and run the dispersion test.
+
+NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual vs fitted plot using the simulated residuals from this model. For this reason, you'll run function [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
+
+```{r gala_assess_glm, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "gala_glm_ready"}
+sim_pois_glm <- simulateResiduals(____)
+testUniformity(____)
+testDispersion(____)
+```
+
+```{r gala_assess_glm-hint}
+# Pass mod_gala_glm to simulateResiduals(), then pass
+# sim_pois_glm to testUniformity and testDispersion().
+```
+
+```{r gala_assess_glm-solution, exercise.reveal_solution = TRUE, include = FALSE}
+sim_pois_glm <- simulateResiduals(mod_gala_glm)
+testUniformity(sim_pois_glm)
+testDispersion(sim_pois_glm)
+```
+
+```{r gala_assess_glm-check}
+grade_this_code(
+  correct = "Examine the output. The QQ-plot should show points deviating noticeably from the diagonal. The dispersion test will report a very high dispersion (>>1) and low *P*-value, indicating that the observed variance is far larger than the Poisson model can accomodate. This is overdispersion and it is a serious problem because it means all standard errors are underestimated and *P*-values are artificially too small."
+)
+```
+
+### 
+
+```{r gala_glm_quiz}
+quiz(
+  question(
+    "What does overdispersion mean in the context of a Poisson GLM?",
+    answer("The model has too many predictors."),
+    answer("The observed variance in the count data is much larger than the mean, violating the Poisson assumption that variance = mean.",
+           correct = TRUE),
+    answer("The response variable is not a whole number."),
+    answer("The predictors are on different scales."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  question(
+    "What is the practical consequence of ignoring overdispersion in a Poisson GLM?",
+    answer("Standard errors are underestimated, making effects look more significant than they really are.",
+           correct = TRUE),
+    answer("Standard errors are overestimated, making effects look less significant than they really are."),
+    answer("The coefficient estimates (slopes) become biased."),
+    answer("The model cannot be fitted at all."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 2.6: Fix overdispersion with an observation-level random effect (OLRE)
+
+One way to handle overdispersion in a Poisson GLMM is to add an **observation-level random effect (OLRE)**. The idea is simple: you add a unique random intercept for each row of the data (similarly to having an error term in a simple linear regression for every observation). Because each island is a unique observation, using `(1 | Island)` adds one independent random deviation per data point. These deviations introduce extra variance on the log scale, giving the model the flexibility to fit counts that are more variable than the Poisson distribution alone allows.
+
+This is fitted with [glmmTMB()](https://www.rdocumentation.org/packages/glmmTMB/versions/1.1.13/topics/glmmTMB) from the [glmmTMB package](https://github.com/glmmTMB/glmmTMB). The syntax is almost identical to [glm()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/glm), with the addition of the random effect term in the formula:
+
+```r
+mod_gala_olre <- glmmTMB(Species ~ lnArea + lnNearest + (1 | Island),
+                          data   = gala_clean,
+                          family = poisson)
+```
+
+**Your Turn:** Replace the blanks to fit the OLRE model. Assign it to `mod_gala_olre`.
+
+```{r gala_fit_olre, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "gala_glm_ready"}
+mod_gala_olre <- ____(____ ~ ____ + ____ + (____),
+                      data   = gala_clean,
+                      family = ____)
+```
+
+```{r gala_fit_olre-hint-1}
+# Use glmmTMB() instead of glm().
+# The random effect term is (1 | Island).
+```
+
+```{r gala_fit_olre-hint-2}
+mod_gala_olre <- glmmTMB(Species ~ lnArea + lnNearest + (1 | Island),
+                          data   = gala_clean,
+                          family = ____)
+```
+
+```{r gala_fit_olre-solution, exercise.reveal_solution = TRUE, include = FALSE}
+mod_gala_olre <- glmmTMB(Species ~ lnArea + lnNearest + (1 | Island),
+                          data   = gala_clean,
+                          family = poisson)
+```
+
+```{r gala_fit_olre-check}
+grade_this_code(
+  correct = "The OLRE model has been succesfully fitted and assigned to `mod_gala_olre`. Next step: check whether the new model resolves the overdispersion problem."
+)
+```
+
+### Exercise 2.7: Assess the OLRE model with DHARMa
+
+**Your Turn:** Simulate residuals from `mod_gala_olre`, plot them on a QQ-plot, and run the dispersion test.
+
+NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual vs fitted plot using the simulated residuals from this model. For this reason, you'll run function [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
+
+```{r gala_assess_olre, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "gala_olre_ready"}
+sim_gala_olre <- ____(____)
+____(____)
+____(____)
+```
+
+```{r gala_assess_olre-hint}
+# Same two steps as in Exercise 2.5, but 
+# now using mod_gala_olre and sim_gala_olre.
+```
+
+```{r gala_assess_olre-solution, exercise.reveal_solution = TRUE, include = FALSE}
+sim_gala_olre <- simulateResiduals(mod_gala_olre)
+testUniformity(sim_gala_olre)
+testDispersion(sim_gala_olre)
+```
+
+```{r gala_assess_olre-check}
+grade_this_code(
+  correct = "Compare these diagnostics to those from Exercise 2.5. The QQ-plot should now show points much closer to the diagonal and the dispersion test should no longer be significant. The OLRE has absorbed the extra-Poisson variability and the model is now a much better fit to these data."
+)
+```
+
+### Exercise 2.8: Print the model summary
+
+Now that the model passes diagnostics, examine the parameter estimates.
+
+**Your Turn:** Write the command to print a summary of `mod_gala_olre`.
+
+```{r gala_summary, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "gala_olre_ready"}
+
+```
+
+```{r gala_summary-hint}
+# Use summary()
+```
+
+```{r gala_summary-solution}
+summary(mod_gala_olre)
+```
+
+```{r gala_summary-check}
+grade_this_code(
+  correct = "The summary has two main sections of interest to us. For fixed effects (bottom) you will see the `(Intercept)`, the effect of `lnArea`, and the effect of `lnNearest` (all on the log scale). Note that, differently from the fixed effects only model, here the *P*-value for `lnNearest` is high and we cannot reject the null hypothesis that it has no relationship to number of species. Only `lnArea` has a low enough *P*-value for us to conclude that it relates to number of species.
+\n  
+For random effects (middle) you will see the estimated variance for the island-level random intercepts (`Island (Intercept)`, the OLRE). A larger variance here means overdispersion was present in the data and is now captured by this random effect."
+)
+```
+
+### 
+
+The fixed-effect coefficients are on the **log scale** (because the model uses a log link). To interpret them on the original count scale, you exponentiate: $e^{\hat{\beta}}$ gives the **multiplicative change** in expected species count for a one-unit change in **log units** of the predictor (because we used them in the log scale), holding all others constant.
+
+```{r gala_summary_quiz}
+quiz(
+  question(
+    "The coefficient for `lnArea` is positive. What does this mean on the original (count) scale?",
+    answer("Islands with larger areas are expected to have more plant species.",
+           correct = TRUE),
+    answer("Islands with larger areas are expected to have fewer plant species."),
+    answer("Area has no effect on species richness."),
+    answer("The coefficient is the expected number of species on a 1 km² island."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  question(
+    "What does the random-effect variance in the OLRE model represent?",
+    answer("The amount of extra-Poisson variability in species counts not explained by the fixed predictors.",
+           correct = TRUE),
+    answer("The variance in species counts between different sampling events."),
+    answer("The variance explained by area and distance combined."),
+    answer("The residual variance after removing all predictors."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 2.9: Visualize the model predictions
+
+You will create a plot of the model's predicted species richness as a function of island area, with the distance-to-nearest-island held at its mean. The workflow is:
+
+1. Create a sequence of `lnArea` values spanning the observed range.
+2. Use [predict()](https://www.rdocumentation.org/packages/glmmTMB/versions/1.1.13/topics/predict.glmmTMB) with `type = "link"` and `se.fit = TRUE` to get predictions and their standard errors on the log scale. Use `re.form = NA` to get **population-level** predictions (ignoring island-specific random effects, which is appropriate when predicting to a new island not in the data).
+3. Back-transform to the count scale with `exp()` and compute a 95% confidence interval.
+4. Plot predictions and raw data together.
+
+**Your Turn:** Just examine the code below. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
+
+```{r gala_predict, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "gala_olre_ready", exercise.lines = 29}
+# Step 1: create a grid of lnArea values
+new_data <- tibble(
+  lnArea    = seq(min(gala_clean$lnArea), max(gala_clean$lnArea),
+                  length.out = 100),
+  lnNearest = mean(gala_clean$lnNearest)
+)
+
+# Step 2: predictions on the log (link) scale
+pred_lp <- predict(mod_gala_olre, newdata = new_data,
+                   type = "link", se.fit = TRUE, re.form = NA)
+
+# Step 3: back-transform and compute CI
+new_data <- new_data |>
+  mutate(
+    fit  = exp(pred_lp$fit),
+    lwr  = exp(pred_lp$fit - 1.96 * pred_lp$se.fit),
+    upr  = exp(pred_lp$fit + 1.96 * pred_lp$se.fit),
+    Area = exp(lnArea)
+  )
+
+# Step 4: plot predictions with raw data
+ggplot(new_data, aes(x = Area, y = fit)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_line() +
+  geom_point(data = gala_clean, aes(x = Area, y = Species),
+             inherit.aes = FALSE, alpha = 0.5) +
+  xlab("Area (km²)") +
+  ylab("Expected number of species") +
+  theme_light()
+```
+
+```{r gala_predict-check}
+grade_this({
+  pass("The ribbon shows the 95% confidence interval for the expected species count as island area increases, with nearest-island distance held at its mean. The curve is not linear. That is because we are showing predictions on the original (count) scale even though the model is linear on the log scale. 
+\n
+Each point is a real island. The model describes their average trend well. Notice that Isabela (the large, species-rich island on the right) is well within the confidence band.")
+})
+```
+
+----
+
+## 3. Normal GLMM
+
+### Tutorial dataset: Red panda movement distances
+
+The `redpanda_moves` data frame is available from the [ecoteach](https://weharris.r-universe.dev/ecoteach) package, which includes a collection of ecological and agricultural data sets for teaching data analysis.
+
+The data set was originally used in the publication by [Bista et al. (2024)](https://nsojournals.onlinelibrary.wiley.com/doi/10.1002/wlb3.01384). Their goal was to investigate the relationship between red panda movements and examining the effects of weather conditions and human activity. It contains 218 daily distances (in metres) moved by 10 (6 female and 4 males) red pandas (*Ailurus fulgens*) that were GPS-collared in the mountainous region of Ilam and Panchthar districts of Nepal.
+
+Each row in the `redpanda_moves` data frame is one day's observation for one animal. The variables you're going to focus on in this tutorial are:
+
+- `Animal_Id`: individual animal identifier (10 animals: Female1–Female6, Male1–Male4)
+- `Sex`: sex of the animal (`Female` or `Male`)
+- `Snow_cover`: whether snow was present on the ground that day (`No` or `Yes`)
+- `Distance`: distance moved in the 24-hour period (metres)
+
+The research question you will address is:
+
+> Does daily movement distance differ between sexes and between days with and without snow cover?
+
+The critical feature of this data set is that there are multiple observations for each individual red panda. Observations from the same red panda are not independent, as an animal that tends to move a lot will likely do so on all its observation days, regardless of snow. Ignoring this structure leads the model to treat 218 observations as though they were collected from 218 independent animals, which will create artifically low SE and increase our chances identifying effects that do not exist.
+
+----
+
+### Exercise 3.1: Load packages and prepare the data
+
+The `redpanda_moves` data frame is loaded automatically when you load **ecoteach**. After loading the required packages, you will create one new variable: `lnDistance = log(Distance)`. You will use this log-transformed response in all model-fitting exercises (though, we will first check whether this transformation is appropriate by exploring the data).
+
+**Your Turn:** Replace the blanks to create `lnDistance`.
+
+```{r panda_prep, exercise = TRUE, exercise.eval = FALSE}
+# Load packages
+library(tidyverse)
+library(ecoteach)
+library(glmmTMB)
+library(DHARMa)
+
+# Create log-transformed response
+redpanda_clean <- redpanda_moves |>
+  mutate(lnDistance = ____(Distance))
+
+# Inspect redpanda_clean
+redpanda_clean
+```
+
+```{r panda_prep-hint-}
+# Use log() to compute the natural 
+# logarithm.
+```
+
+```{r panda_prep-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Load packages
+library(tidyverse)
+library(ecoteach)
+library(glmmTMB)
+library(DHARMa)
+
+# Create log-transformed response
+redpanda_clean <- redpanda_moves |>
+  mutate(lnDistance = log(Distance))
+
+# Inspect redpanda_clean
+redpanda_clean
+```
+
+```{r panda_prep-check}
+grade_this_code(
+  correct = "You now have 218 rows and an `lnDistance` column added to the data frame. Note that the `Animal_Id`, `Sex`, and `Snow_cover` variables are already factors."
+)
+```
+
+### Exercise 3.2: Compare distributions of Distance and lnDistance
+
+Before deciding which scale to model on, compare the distribution of the raw response (`Distance`) to the log-transformed response (`lnDistance`). Histograms faceted by `Snow_cover` and `Sex` are a useful first look.
+
+**Your Turn:** Replace the blanks to make two histograms (one for `Distance` and one for `lnDistance`), each faceted by `Snow_cover` (rows) and `Sex` (columns). 
+
+```{r panda_hist, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_panda"}
+# Raw Distance
+ggplot(redpanda_clean, aes(x = ____)) +
+  ____(bins = 25) +
+  facet_grid(____ ~ ___) +
+  xlab("Distance moved (m)") +
+  ylab("Count") +
+  theme_light()
+
+# Log-transformed Distance
+ggplot(redpanda_clean, aes(x = ____)) +
+  ____(bins = 25) +
+  facet_grid(____ ~ ____) +
+  xlab("ln(Distance moved)") +
+  ylab("Count") +
+  theme_light()
+```
+
+```{r panda_hist-hint-1}
+# Use Distance for the first plot and 
+# lnDistance for the second.
+```
+
+```{r panda_hist-hint-2}
+# Use geom_histogram()
+```
+
+```{r panda_hist-hint-3}
+# The variable that goes in the columns
+# of the multipanel plot is placed to 
+# the right of ~ in facet_grid()
+```
+
+```{r panda_hist-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(redpanda_clean, aes(x = Distance)) +
+  geom_histogram(bins = 25) +
+  facet_grid(Snow_cover ~ Sex) +
+  xlab("Distance moved (m)") +
+  ylab("Count") +
+  theme_light()
+
+ggplot(redpanda_clean, aes(x = lnDistance)) +
+  geom_histogram(bins = 25) +
+  facet_grid(Snow_cover ~ Sex) +
+  xlab("ln(Distance moved)") +
+  ylab("Count") +
+  theme_light()
+```
+
+```{r panda_hist-check}
+grade_this_code(
+  correct = "The raw `Distance` histograms are right-skewed in all sex × snow-cover combinations: most days the pandas move a modest distance, but a long tail of high-movement days pulls the distribution to the right. 
+\n  
+After the log transform, the distributions are much more symmetric and bell-shaped. A symmetric, approximately Normal distribution is what a Normal (Gaussian) GLMM requires of the response, conditional on the predictors and random effects (meaning the residuals will be normally distributed), so we will model `lnDistance`."
+)
+```
+
+### Exercise 3.3: Visualize the distance moved by snow cover and sex
+
+**Your Turn:** Replace the blanks to make a boxplot of `lnDistance` by `Snow_cover`, with individual points overlaid, faceted by `Sex`.
+
+```{r panda_boxplot, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_panda"}
+ggplot(redpanda_clean, aes(x = ____, y = ____)) +
+  ____() +
+  ____(width = 0.12, alpha = 0.3) +
+  ____(~ ____) +
+  xlab("Snow cover") +
+  ylab("ln(Distance moved)") +
+  theme_light()
+```
+
+```{r panda_boxplot-hint-1}
+# x = Snow_cover, y = lnDistance
+```
+
+```{r panda_boxplot-hint-2}
+# Use geom_boxplot()
+```
+
+```{r panda_boxplot-hint-3}
+# Use geom_jitter() to add points
+```
+
+```{r panda_boxplot-solution, exercise.reveal_solution = TRUE, include = FALSE}
+ggplot(redpanda_clean, aes(x = Snow_cover, y = lnDistance)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.12, alpha = 0.3) +
+  facet_wrap(~ Sex) +
+  xlab("Snow cover") +
+  ylab("ln(Distance moved)") +
+  theme_light()
+```
+
+```{r panda_boxplot-check}
+grade_this_code(
+  correct = "Look at how the medians and spread differ across the snow × sex combinations. Does the effect of snow appear to go in the same direction and magnitude for both sexes? Does one sex appear to move further than the other? Keep these visual impressions in mind when interpreting the model output later."
+)
+```
+
+### Exercise 3.4: Visualize individual variation
+
+This plot is the key visual motivation for including a random effect. You will plot the **mean** `Distance` (on the raw scale) for each animal under each snow condition, with lines connecting the two conditions for each red panda. Lines at different heights indicate that animals differ in their overall activity level (justifying a **random intercept**), while lines with different slopes would suggest animals also differ in how they respond to snow (justifying a **random slope**).
+
+**Your Turn:** Just examine the code below. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
+
+```{r panda_lines, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_panda"}
+redpanda_clean |>
+  group_by(Animal_Id, Sex, Snow_cover) |>
+  summarise(mean_dist = mean(Distance), .groups = "drop") |>
+  ggplot(aes(x = Snow_cover, y = mean_dist,
+             group = Animal_Id, colour = Sex)) +
+  geom_point(size = 2.5) +
+  geom_line() +
+  xlab("Snow cover") +
+  ylab("Mean distance moved (m)") +
+  theme_light() +
+  theme(legend.position = "top")
+```
+
+```{r panda_lines-check}
+grade_this({
+  pass("Notice that the lines occupy very different vertical positions. This means some red pandas consistently move much further than others regardless of snow cover. This is the key visual signal that a random intercept per individual is needed: each animal has its own baseline activity level. 
+\n       
+The lines also have somewhat different slopes, suggesting animals may differ in how they respond to snow, but with only 10 individuals this would be very difficult to estimate reliably, as we saw in the lecture. So we will avoid random slopes in the tutorial.")
+})
+```
+
+### Exercise 3.5: Fit the fixed-effects model (no random effect)
+
+You will fit a Normal (Gaussian) GLMM using `glmmTMB()` **without** any random effect. This is equivalent to assuming all 218 observations are independent, which you already know is not true. This model will serve as a baseline to show what goes wrong when the repeated-measures structure is ignored.
+
+The model formula is `lnDistance ~ Snow_cover * Sex`, where the `*` includes both main effects and their interaction.
+
+**Your Turn:** Replace the blanks to fit the fixed-effects-only model. Assign it to `mod_fixed`.
+
+```{r panda_fit_fixed, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "setup_panda"}
+mod_fixed <- ____(____ ~ ____ * ____,
+                  data = redpanda_clean)
+```
+
+```{r panda_fit_fixed-hint}
+# Use glmmTMB(). The response is lnDistance.
+# No family argument is needed, as the default is gaussian.
+```
+
+```{r panda_fit_fixed-solution, exercise.reveal_solution = TRUE, include = FALSE}
+mod_fixed <- glmmTMB(lnDistance ~ Snow_cover * Sex,
+                     data = redpanda_clean)
+```
+
+```{r panda_fit_fixed-check}
+grade_this_code(
+  correct = "The fixed-effects model has been successfully fitted and assigned to `mod_fixed`. Next, check whether it meets the Gaussian assumptions and whether the residuals reveal any sign of the non-independence we know is present."
+)
+```
+
+### Exercise 3.6: Assess the fixed-effects model
+
+You will use both classical residual plots (QQ-plot and residuals vs. fitted) to assess this model.
+
+**Your Turn:** Replace the blanks to extract fitted values and residuals, make a QQ-plot (using `qqnorm()` and `qqline()`), make a residuals vs. fitted plot, and a boxplot of residuals by `Animal_Id`.
+
+```{r panda_assess_fixed, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_fixed_ready"}
+# Extract fitted values and residuals
+fit <- ____(mod_fixed)
+res <- ____(mod_fixed)
+
+# QQ-plot
+____(res)
+____(res)
+
+# Residuals vs. fitted
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+
+# Boxplot of residuals by Animal_Id
+boxplot(res ~ redpanda_clean$Animal_Id)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r panda_assess_fixed-hint}
+# Use fitted() to extract fitted values and 
+# residuals() to extract residuals.
+```
+
+```{r panda_assess_fixed-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted values and residuals
+fit <- fitted(mod_fixed)
+res <- residuals(mod_fixed)
+
+# QQ-plot
+qqnorm(res)
+qqline(res)
+
+# Residual vs. fitted 
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+
+# Boxplot of residuals by Animal_Id
+boxplot(res ~ redpanda_clean$Animal_Id)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r panda_assess_fixed-check}
+grade_this_code(
+  correct = "The QQ-plot should look reasonably good, as the log transform worked to normalise the residuals. The residuals vs. fitted plot may also look acceptable. 
+\n  
+However, the boxplot shows that several red pandas have residuals that are consistently shifted above or below zero, suggesting that the model systematically overpredicts for some individuals and underpredicts for others. This indicates persistent individual-level differences that the model is not capturing. This is evidence that red panda ID should be included as a random effect in the model, allowing each individual to have its own deviation from the overall mean."
+)
+```
+
+### 
+
+```{r panda_fixed_quiz}
+quiz(
+  question(
+    "Why is it a problem to treat all 218 observations as independent when Sex is one of the predictors?",
+    answer("Because Sex is measured at the individual level (each animal has only one sex), so the effective sample size for estimating the Sex effect is 10 animals, not 218 observations.",
+           correct = TRUE),
+    answer("Because Sex is a continuous variable and cannot be used in a GLM."),
+    answer("Because some animals moved on both snowy and non-snowy days."),
+    answer("Because the log transformation makes Sex redundant."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 3.7: Fit the random-intercept model
+
+Now add a random intercept for `Animal_Id` to the model. This allows each animal to have its own baseline log-movement distance, capturing the individual-level variation you saw in Exercise 3.4. The formula extension is `+ (1 | Animal_Id)`.
+
+**Your Turn:** Replace the blanks to fit the random-intercept model. Assign it to `mod_ri`.
+
+```{r panda_fit_ri, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_fixed_ready"}
+mod_ri <- glmmTMB(lnDistance ~ Snow_cover * Sex + (____ | ____),
+                  data = redpanda_clean)
+```
+
+```{r panda_fit_ri-hint}
+# The random effect term is (1 | Animal_Id).
+```
+
+```{r panda_fit_ri-solution, exercise.reveal_solution = TRUE, include = FALSE}
+mod_ri <- glmmTMB(lnDistance ~ Snow_cover * Sex + (1 | Animal_Id),
+                  data = redpanda_clean)
+```
+
+```{r panda_fit_ri-check}
+grade_this_code(
+  correct = "The random-intercept model has been successfully fitted and assigned to `mod_ri`. The notation `(1 | Animal_Id)` tells glmmTMB to estimate one random deviation from the overall intercept for each of the 10 individual animals. These deviations are assumed to be drawn from a Normal distribution with mean 0 and an estimated standard deviation."
+)
+```
+
+### Exercise 3.8: Assess the random-intercept model
+
+**Your Turn:** Repeat the same diagnostics as in Exercise 3.6, but now using `mod_ri`.
+
+```{r panda_assess_ri, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_ri_ready"}
+# Extract fitted values and residuals
+fit <- ____(____)
+res <- ____(____)
+
+# QQ-plot
+____(res)
+____(res)
+
+# Residuals vs. fitted
+plot(____, ____)
+____(a = 0, b = 0, lty = "dashed")
+
+# Boxplot of residuals by Animal_Id
+____(____ ~ ____$____)
+____(a = 0, b = 0, lty = "dashed")
+```
+
+```{r panda_assess_ri-hint}
+# Check out code in Exercice 3.6.
+# The only difference is that you will
+# use mod_ri here.
+```
+
+```{r panda_assess_ri-solution, exercise.reveal_solution = TRUE, include = FALSE}
+# Extract fitted values and residuals
+fit <- fitted(mod_ri)
+res <- residuals(mod_ri)
+
+# QQ-plot
+qqnorm(res)
+qqline(res)
+
+# Residual vs. fitted 
+plot(fit, res)
+abline(a = 0, b = 0, lty = "dashed")
+
+# Boxplot of residuals by Animal_Id
+boxplot(res ~ redpanda_clean$Animal_Id)
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r panda_assess_ri-check}
+grade_this_code(
+  correct = "Compare these diagnostics to those from Exercise 3.6. The QQ-plot should now show points even closer to the diagonal, and the residuals vs. predicted plot should have no clear patterns. 
+\n 
+The strong individual-specific shifts seen before have mostly disappeared in the current boxplot of residuals by `Animal_Id`. This suggests that the random intercept has captured much of the between-individual variation in average response. This is exactly what we would hope to see after adding animal ID as a random intercept."
+)
+```
+
+### Exercise 3.9: Compare models with a likelihood-ratio test
+
+As we have seen in previous labs, a likelihood-ratio test (LRT) compares two nested models to ask whether the more complex model fits significantly better than the simpler one. Here, you will use function `anova()` to test whether adding the random intercept significantly improves the model fit compared to the fixed-effects-only model (if it does the test *P*-value should be small, as the null hypothesis being tested is that the additional complexity added by random intercepts **does not** improve fit).
+
+**Your Turn:** Replace the blanks to compare `mod_fixed` and `mod_ri` with a likelihood-ratio test using `anova()`. Recall that the simpler model must be listed first
+
+```{r panda_anova, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_ri_ready"}
+____(____, ____, test = ____)
+```
+
+```{r panda_anova-hint-1}
+# Pass mod_fixed first, then mod_ri.
+```
+
+```{r panda_anova-hint-2}
+# Use test = "LRT"
+```
+
+```{r panda_anova-solution}
+anova(mod_fixed, mod_ri, test = "LRT")
+```
+
+```{r panda_anova-check}
+grade_this_code(
+  correct = "The output shows a very low p-value for the likelihood-ratio test. A significant *P*-value (typically < 0.05) means the random-intercept model fits significantly better. This tells us that the variation in baseline movement among individuals is large enough that it cannot be ignored."
+)
+```
+
+### Exercise 3.10: Compare standard errors between models
+
+A key lesson from this section is that ignoring repeated measures does not bias the *coefficient estimates* much, but it does lead to **artificially narrow standard errors** for between-individual effects (like `Sex`). This is because the fixed-effects-only model treats 218 observations as independent, effectively using them all to estimate the sex effect, even though sex can only vary among the 10 animals.
+
+**Your Turn:** Just run the code below to print the fixed-effect coefficient tables from both models side by side. Pay attention to the `Std. Error` column.
+
+```{r panda_se_compare, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_ri_ready"}
+# Fixed-effects-only model coefficient table
+cat("Fixed-effects-only model:\n")
+coef(summary(mod_fixed))$cond
+
+# Random-intercept model coefficient table
+cat("\nRandom-intercept model:\n")
+coef(summary(mod_ri))$cond
+```
+
+```{r panda_se_compare-check}
+grade_this({
+  pass("Look carefully at the `Std. Error` column for each term. The standard error for `SexMale` should be noticeably larger in the random-intercept model than in the fixed-effects model. This is because, in the mixed model, the Sex effect is estimated from the 10 individual animals (the true unit of replication for a between-individual factor), not from all 218 observations. The wider SE reflects the true uncertainty in the Sex effect. 
+\n       
+For `Snow_coverYes`, the SE barely changes between models. This is because snow cover varies *within* animals, so both models have genuine replication for this effect.")
+})
+```
+
+### Exercise 3.11: Print and interpret the random-intercept model summary
+
+**Your Turn:** Write the command to print a summary of `mod_ri`.
+
+```{r panda_summary, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_ri_ready"}
+
+```
+
+```{r panda_summary-hint}
+# Use summary()
+```
+
+```{r panda_summary-solution}
+summary(mod_ri)
+```
+
+```{r panda_summary-check}
+grade_this_code(
+  correct = "The summary has two main parts. The `Fixed effects` table shows the intercept (expected log-distance for a Female with no snow cover), the effect of snow (`Snow_coverYes`), the effect of sex (`SexMale`), and the interaction (`Snow_coverYes:SexMale`). All coefficients are on the **log scale**. To interpret on the metres scale, exponentiate: exp(coefficient) is the *multiplicative* change in expected distance. For example, exp(0.3) ≈ 1.35 means 35% further.
+\n
+The `Random effects` table shows the estimated standard deviation of the animal-level random intercepts. This quantifies how much individual red pandas differ in their typical daily movement. A larger SD means more individual variation in baseline movement."
+)
+```
+
+### 
+
+```{r panda_summary_quiz}
+quiz(
+  question(
+    "The intercept in `mod_ri` is on the log scale. What does exp(intercept) represent?",
+    answer("The expected daily movement distance in metres for a Female panda on a day with no snow cover.",
+           correct = TRUE),
+    answer("The expected daily movement distance in metres averaged across both sexes and snow conditions."),
+    answer("The log of the average movement distance for all animals combined."),
+    answer("The standard deviation of the random intercepts."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  question(
+    "The coefficient for `Snow_coverYes` is positive. What does this mean on the original metres scale?",
+    answer("Pandas move further on days with snow cover than on days without snow.",
+           correct = TRUE),
+    answer("Pandas move shorter distances on days with snow cover."),
+    answer("Snow cover has no effect on movement."),
+    answer("The effect of snow cover is different for males and females."),
+    allow_retry = TRUE,
+    random_answer_order = TRUE
+  ),
+  caption = "Check your understanding"
+)
+```
+
+### Exercise 3.12: Visualize population-level predictions
+
+You will now plot the model's predicted movement distance (back-transformed to metres) as a function of snow cover for each sex. These are **population-level** (marginal) predictions obtained by setting the random effects to zero, which represents a typical animal from the population.
+
+**Your Turn:** Replace the blanks to complete the prediction and ggplot and codes.
+
+```{r panda_pred_pop, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_ri_ready", exercise.lines = 26}
+# Create new data with all combinations of 
+# Snow_cover and Sex
+new_pop <- expand_grid(
+  Snow_cover = levels(redpanda_clean$Snow_cover),
+  Sex        = levels(redpanda_clean$Sex)
+)
+
+# Population-level predictions (re.form = NA 
+# sets random effects to zero)
+new_pop <- new_pop |>
+  mutate(
+    pred_ln = ____(mod_ri, 
+                      newdata = new_pop, 
+                      re.form = NA),
+    pred_m  = ____(pred_ln)   # back-transform to metres
+  )
+
+# Plot
+ggplot(new_pop, aes(x = ____, y = ____, 
+                    group = Sex, colour = Sex)) +
+  ____(size = 3) + # geom for point
+  ____() +         # geom for line
+  xlab("Snow cover") +
+  ylab("Predicted distance moved (m)") +
+  theme_light() +
+  theme(legend.position = "top")
+```
+
+```{r panda_pred_pop-hint}
+# x = Snow_cover, group = Sex, colour = Sex
+```
+
+```{r panda_pred_pop-solution, exercise.reveal_solution = TRUE, include = FALSE}
+new_pop <- expand_grid(
+  Snow_cover = levels(redpanda_clean$Snow_cover),
+  Sex        = levels(redpanda_clean$Sex)
+)
+
+new_pop <- new_pop |>
+  mutate(
+    pred_ln = predict(mod_ri, 
+                      newdata = new_pop, 
+                      re.form = NA),
+    pred_m  = exp(pred_ln)
+  )
+
+ggplot(new_pop, aes(x = Snow_cover, y = pred_m,
+                    group = Sex, colour = Sex)) +
+  geom_point(size = 3) + 
+  geom_line() +
+  xlab("Snow cover") +
+  ylab("Predicted distance moved (m)") +
+  theme_light() +
+  theme(legend.position = "top")
+```
+
+```{r panda_pred_pop-check}
+grade_this_code(
+  correct = "This plot shows the model's expected movement distance for a typical individual of each sex, with and without snow. The lines connect the two snow conditions for each sex, making the snow effect and the sex difference easy to compare visually."
+)
+```
+
+### Exercise 3.13: Visualize individual-level (conditional) predictions
+
+Finally, you will generate **conditional** (individual-specific) predictions that include each red panda's random intercept. These predictions show how the model captures the individual baselines you saw in Exercise 3.4.
+
+You will learn a new and super useful tidyverse function here: [left_join()](https://dplyr.tidyverse.org/reference/mutate-joins.html). It matches rows between two data frames using a key column (shared between data frames) and adds variables from the second data frame (right) to the first (left), while keeping all rows from the first data frame. Here, when creating a new grid for predictions, you will uses `Animal_Id` to add each red panda’s `Sex` to the dtaa frame created with [expand_grid()](https://tidyr.tidyverse.org/reference/expand_grid.html).
+
+**Your Turn:** Just examine the code below. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
+
+```{r panda_pred_ind, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "panda_ri_ready", exercise.lines = 26}
+# Create new data for all animals under each snow condition
+new_ind <- expand_grid(
+  Animal_Id  = levels(redpanda_clean$Animal_Id),
+  Snow_cover = levels(redpanda_clean$Snow_cover)
+) |>
+  left_join(distinct(redpanda_clean, Animal_Id, Sex), 
+            by = "Animal_Id")
+
+# Conditional predictions include each animal's 
+# random intercept. Note that here we did not 
+# include re.form = NA, so the function uses the 
+# default re.form = NULL, which predicts at the 
+# level of each random effect.
+new_ind <- new_ind |>
+  mutate(pred_ln = predict(mod_ri, newdata = new_ind),
+         pred_m  = exp(pred_ln))
+
+# Plot individual trajectories
+ggplot(new_ind, aes(x = Snow_cover, y = pred_m,
+                    group = Animal_Id, colour = Sex)) +
+  geom_point(size = 2) +
+  geom_line() +
+  xlab("Snow cover") +
+  ylab("Predicted distance moved (m)") +
+  theme_light() +
+  theme(legend.position = "top")
+```
+
+```{r panda_pred_ind-check}
+grade_this({
+  pass("Compare this plot to the one in Exercise 3.4. The individual lines are now spread across different vertical positions (their random intercepts), but all lines of the same sex shift in the same direction from `No` to `Yes` snow. This is the fixed snow-cover x sex interaction effect, which all red pandas share.")
+})
+```
+
+### 
+
+You have completed this tutorial. Check out this lab's instructions web page for additional learning material on generalized linear mixed models in R and for starting Assignment # 6.
