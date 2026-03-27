@@ -1,7 +1,7 @@
 Package: biol325learnr
 Type: Package
 Title: Tutorials for BIOL 325 - Ecological Analyses based on learnr
-Version: 0.0.0.9006
+Version: 0.0.0.9007
 Authors@R: c(
     person(
       "Eduardo", "Martins",
