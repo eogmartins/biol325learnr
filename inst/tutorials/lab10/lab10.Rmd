@@ -143,7 +143,7 @@ You will work with these two data sets because each highlight a different reason
 
 - **Plant species richness on the Galápagos Islands**: a Poisson GLM is fitted first, and diagnostics reveal that the data are more variable (**overdispersed**) than can be accommodate by the Poisson variance. You will then extend the model by adding an **observation-level random effect** (OLRE) to absorb the extra-Poisson variability.
 
-- **Daily movement distances of red pandas**: a fixed-effects Gaussian model is fitted first, and diagnostics reveal evidence of **non-independence** caused by repeated measurements on the same individuals. You will then add a and **individual-level random effect** to account for the correlated nature of observations from the same individual.
+- **Daily movement distances of red pandas**: a fixed-effects Gaussian model is fitted first, and diagnostics reveal evidence of **non-independence** caused by repeated measurements on the same individuals. You will then add an **individual-level random effect** to account for the correlated nature of observations from the same individual.
 
 ### What are random effects?
 
@@ -151,7 +151,7 @@ A **random effect** is a model term whose levels are treated as a random sample 
 
 1. **Borrow strength across groups**: Estimates for groups with little data are partially pooled toward the overall mean, reducing extreme estimates driven mainly by small sample size. This is often called shrinkage.
 2. **Partition variance**: Random effects allow you to separate variation among groups from variation within groups. In random-intercept models, this also lets you quantify how strongly observations from the same group resemble one another using the intra-class correlation (ICC).
-3. **Account for non-independence**: If observations within groups are correlated and we ignore that, we usually underestimate the uncertainty in the fixed effects. Random effects account for this dependence, leading to more reliable standard error estimates and inference.
+3. **Account for non-independence**: If observations within groups are correlated and we ignore that, we usually underestimate the uncertainty (standard error) in the fixed effects. Random effects account for this dependence, leading to more reliable standard error estimates and inference.
 
 ----
 
@@ -159,9 +159,9 @@ A **random effect** is a model term whose levels are treated as a random sample 
 
 ### Tutorial dataset: Galápagos Islands plant richness
 
-The `gala` data frame is available from from the R package [faraway](https://cran.r-project.org/package=faraway), which includes data and functions associated with the books [Linear Models with R](https://www.routledge.com/Linear-Models-with-R/Faraway/p/book/9781032583983) and [Extending the Linear Model with R](https://www.routledge.com/Extending-the-Linear-Model-with-R-Generalized-Linear-Mixed-Effects-and-Nonparametric-Regression-Models-Second-Edition/Faraway/p/book/9781498720960) by Julian Faraway.
+The `gala` data frame is available from the R package [faraway](https://cran.r-project.org/package=faraway), which includes data and functions associated with the books [Linear Models with R](https://www.routledge.com/Linear-Models-with-R/Faraway/p/book/9781032583983) and [Extending the Linear Model with R](https://www.routledge.com/Extending-the-Linear-Model-with-R-Generalized-Linear-Mixed-Effects-and-Nonparametric-Regression-Models-Second-Edition/Faraway/p/book/9781498720960) by Julian Faraway.
 
-The data set was originally used in the publication by [Johnson and Raven (1973)](https://www.science.org/doi/10.1126/science.179.4076.893). Their goal was to re-analyze the relationship between plant species richness in the Galápagos Islands and various predictors with a new data set available at the time. It and contains counts of plant species recorded on 30 islands of the Galápagos Archipelago (each row is includes observations from one island). 
+The data set was originally used in the publication by [Johnson and Raven (1973)](https://www.science.org/doi/10.1126/science.179.4076.893). Their goal was to re-analyze the relationship between plant species richness on the Galápagos Islands and various predictors with a new data set available at the time. It and contains counts of plant species recorded on 30 islands of the Galápagos Islands (each row includes observations from one island). 
 
 The response variable is species counts, which are non-negative integers. This makes the Poisson the natural distribution for the GLM. In this tutorial, we will focus on two predictors: `Area` (the area of the island in km²) and `Nearest` (the distance from the nearest island in km). The original data set includes other predictors (including `Elevation` that, as we saw in the lecture, is highly correlated to `Area`) that we will ignore to keep the analysis simple and focused on teaching you the workflow of working with a Poisson GLM and using observation-level random effects to address overdispersion.
 
@@ -175,7 +175,7 @@ You will fit the Poisson GLM to address this question, check its assumptions, di
 
 ### Exercise 2.1: Load packages and prepare the data
 
-The `gala` data frame is loaded automatically when you load **faraway**. One feature of `gala` is that the island names are stored as *row names* rather than as a regular column. The function [rownames_to_column()](https://tibble.tidyverse.org/reference/rownames.html) converts them into a proper column named `Island`. You will then select the four variables you need and log-transform `Area` and `Nearest`.
+The `gala` data frame is loaded automatically when you load [faraway](https://cran.r-project.org/package=faraway). One feature of `gala` is that the island names are stored as *row names* rather than as a regular column. The function [rownames_to_column()](https://tibble.tidyverse.org/reference/rownames.html) converts them into a proper column named `Island`. You will then select the four variables you need and log-transform `Area` and `Nearest`.
 
 **Your Turn:** Replace the blanks (`____`) to load the packages, convert the row names to a column called `Island`, select only the four needed variables (`Island`, `Species`, `Area`, and `Nearest`), and create `lnArea` and `lnNearest` with [log](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/log). Assign the result to `gala_clean`.
 
@@ -392,11 +392,11 @@ grade_this_code(
 
 ### Exercise 2.5: Assess the Poisson GLM with DHARMa
 
-As we've seen in the lectures and the previous lab, ordinary residuals are not appropriate for checking GLMs. Instead, you will use the **DHARMa** package, which works by simulating many data sets from the fitted model and comparing the observed data to those simulations. Under a correctly specified model, the resulting *quantile residuals* follow a Uniform(0, 1) distribution.
+As we've seen in the lectures and the previous lab, ordinary residuals are not appropriate for checking GLMs. Instead, you will use the [DHARMa](https://cran.r-project.org/web/packages/DHARMa/index.html) package, which works by simulating many data sets from the fitted model and comparing the observed data to those simulations. Under a correctly specified model, the resulting *quantile residuals* follow a Uniform(0, 1) distribution.
 
 **Your Turn:** Replace the blanks to simulate quantile residuals from `mod_gala_glm` and then plot them on a QQ-plot and run the dispersion test.
 
-NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual vs fitted plot using the simulated residuals from this model. For this reason, you'll run function [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
+NOTE: There is a bug in learnr that throws an error in the tutorial when we try to make the residual *vs.* fitted plot using the simulated residuals from this model. For this reason, you'll run function [testUniformity()](https://www.rdocumentation.org/packages/DHARMa/versions/0.4.7/topics/testUniformity) to see the QQ-plot only.
 
 ```{r gala_assess_glm, exercise = TRUE, exercise.eval = FALSE, exercise.setup = "gala_glm_ready"}
 sim_pois_glm <- simulateResiduals(____)
@@ -582,7 +582,7 @@ quiz(
 You will create a plot of the model's predicted species richness as a function of island area, with the distance-to-nearest-island held at its mean. The workflow is:
 
 1. Create a sequence of `lnArea` values spanning the observed range.
-2. Use [predict()](https://www.rdocumentation.org/packages/glmmTMB/versions/1.1.13/topics/predict.glmmTMB) with `type = "link"` and `se.fit = TRUE` to get predictions and their standard errors on the log scale. Use `re.form = NA` to get **population-level** predictions (ignoring island-specific random effects, which is appropriate when predicting to a new island not in the data).
+2. Use [predict()](https://www.rdocumentation.org/packages/glmmTMB/versions/1.1.13/topics/predict.glmmTMB) with `type = "link"` and `se.fit = TRUE` to get predictions and their standard errors on the log scale. Use `re.form = NA` to get **population-level** predictions (ignoring island-specific random effects).
 3. Back-transform to the count scale with `exp()` and compute a 95% confidence interval.
 4. Plot predictions and raw data together.
 
@@ -636,7 +636,7 @@ Each point is a real island. The model describes their average trend well. Notic
 
 The `redpanda_moves` data frame is available from the [ecoteach](https://weharris.r-universe.dev/ecoteach) package, which includes a collection of ecological and agricultural data sets for teaching data analysis.
 
-The data set was originally used in the publication by [Bista et al. (2024)](https://nsojournals.onlinelibrary.wiley.com/doi/10.1002/wlb3.01384). Their goal was to investigate the relationship between red panda movements and examining the effects of weather conditions and human activity. It contains 218 daily distances (in metres) moved by 10 (6 female and 4 males) red pandas (*Ailurus fulgens*) that were GPS-collared in the mountainous region of Ilam and Panchthar districts of Nepal.
+The data set was originally used in the publication by [Bista et al. (2024)](https://nsojournals.onlinelibrary.wiley.com/doi/10.1002/wlb3.01384). Their goal was to investigate the effects of weather conditions and human activity on red panda (*Ailurus fulgens*) movements. It contains 218 daily distances (in metres) moved by 10 (6 female and 4 males) red pandas that were GPS-collared in the mountainous region of Ilam and Panchthar districts of Nepal.
 
 Each row in the `redpanda_moves` data frame is one day's observation for one animal. The variables you're going to focus on in this tutorial are:
 
@@ -649,13 +649,13 @@ The research question you will address is:
 
 > Does daily movement distance differ between sexes and between days with and without snow cover?
 
-The critical feature of this data set is that there are multiple observations for each individual red panda. Observations from the same red panda are not independent, as an animal that tends to move a lot will likely do so on all its observation days, regardless of snow. Ignoring this structure leads the model to treat 218 observations as though they were collected from 218 independent animals, which will create artifically low SE and increase our chances identifying effects that do not exist.
+The critical feature of this data set is that there are multiple observations for each individual red panda. Observations from the same red panda are not independent, as an animal that tends to move a lot will likely do so on all its observation days, regardless of snow. Ignoring this structure leads the model to treat 218 observations as though they were collected from 218 independent animals, which will create artificially low standard errors and increase our chances identifying effects that do not exist.
 
 ----
 
 ### Exercise 3.1: Load packages and prepare the data
 
-The `redpanda_moves` data frame is loaded automatically when you load **ecoteach**. After loading the required packages, you will create one new variable: `lnDistance = log(Distance)`. You will use this log-transformed response in all model-fitting exercises (though, we will first check whether this transformation is appropriate by exploring the data).
+The `redpanda_moves` data frame is loaded automatically when you load **ecoteach**. After loading the required packages, you will create one new variable: `lnDistance = log(Distance)`. You will use this log-transformed response in all model-fitting exercises (though, you will first check whether this transformation is appropriate by exploring the data).
 
 **Your Turn:** Replace the blanks to create `lnDistance`.
 
@@ -835,7 +835,7 @@ The lines also have somewhat different slopes, suggesting animals may differ in 
 
 ### Exercise 3.5: Fit the fixed-effects model (no random effect)
 
-You will fit a Normal (Gaussian) GLMM using `glmmTMB()` **without** any random effect. This is equivalent to assuming all 218 observations are independent, which you already know is not true. This model will serve as a baseline to show what goes wrong when the repeated-measures structure is ignored.
+You will fit a Normal (Gaussian) GLMM using [glmmTMB()](https://www.rdocumentation.org/packages/glmmTMB/versions/1.1.13/topics/glmmTMB) **without** any random effect. This is equivalent to assuming all 218 observations are independent, which you already know is not true. This model will serve as a baseline to show what goes wrong when the repeated-measures structure is ignored.
 
 The model formula is `lnDistance ~ Snow_cover * Sex`, where the `*` includes both main effects and their interaction.
 
@@ -957,7 +957,7 @@ mod_ri <- glmmTMB(lnDistance ~ Snow_cover * Sex + (1 | Animal_Id),
 
 ```{r panda_fit_ri-check}
 grade_this_code(
-  correct = "The random-intercept model has been successfully fitted and assigned to `mod_ri`. The notation `(1 | Animal_Id)` tells glmmTMB to estimate one random deviation from the overall intercept for each of the 10 individual animals. These deviations are assumed to be drawn from a Normal distribution with mean 0 and an estimated standard deviation."
+  correct = "The random-intercept model has been successfully fitted and assigned to `mod_ri`. The notation `(1 | Animal_Id)` tells `glmmTMB()` to estimate one random deviation from the overall intercept for each of the 10 individual animals. These deviations are assumed to be drawn from a Normal distribution with mean 0 and an estimated standard deviation."
 )
 ```
 
@@ -1017,7 +1017,7 @@ The strong individual-specific shifts seen before have mostly disappeared in the
 
 ### Exercise 3.9: Compare models with a likelihood-ratio test
 
-As we have seen in previous labs, a likelihood-ratio test (LRT) compares two nested models to ask whether the more complex model fits significantly better than the simpler one. Here, you will use function `anova()` to test whether adding the random intercept significantly improves the model fit compared to the fixed-effects-only model (if it does the test *P*-value should be small, as the null hypothesis being tested is that the additional complexity added by random intercepts **does not** improve fit).
+As we have seen in previous labs, a likelihood-ratio test (LRT) compares two nested models to ask whether the more complex model fits significantly better than the simpler one. Here, you will use function [anova()](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/anova) to test whether adding the random intercept significantly improves the model fit compared to the fixed-effects-only model (if it does, the test *P*-value should be small, as the null hypothesis being tested is that the additional complexity added by random intercepts **does not** improve fit).
 
 **Your Turn:** Replace the blanks to compare `mod_fixed` and `mod_ri` with a likelihood-ratio test using `anova()`. Recall that the simpler model must be listed first
 
@@ -1039,7 +1039,7 @@ anova(mod_fixed, mod_ri, test = "LRT")
 
 ```{r panda_anova-check}
 grade_this_code(
-  correct = "The output shows a very low p-value for the likelihood-ratio test. A significant *P*-value (typically < 0.05) means the random-intercept model fits significantly better. This tells us that the variation in baseline movement among individuals is large enough that it cannot be ignored."
+  correct = "The output shows a very low *P*-value for the likelihood-ratio test, meaning the random-intercept model fits significantly better. This tells us that the variation in baseline movement among individuals is large enough that it cannot be ignored."
 )
 ```
 
@@ -1192,7 +1192,7 @@ grade_this_code(
 
 Finally, you will generate **conditional** (individual-specific) predictions that include each red panda's random intercept. These predictions show how the model captures the individual baselines you saw in Exercise 3.4.
 
-You will learn a new and super useful tidyverse function here: [left_join()](https://dplyr.tidyverse.org/reference/mutate-joins.html). It matches rows between two data frames using a key column (shared between data frames) and adds variables from the second data frame (right) to the first (left), while keeping all rows from the first data frame. Here, when creating a new grid for predictions, you will uses `Animal_Id` to add each red panda’s `Sex` to the dtaa frame created with [expand_grid()](https://tidyr.tidyverse.org/reference/expand_grid.html).
+You will learn a new and super useful tidyverse function here: [left_join()](https://dplyr.tidyverse.org/reference/mutate-joins.html). It matches rows between two data frames using a key column (shared between data frames) and adds variables from the second data frame (right) to the first (left), while keeping all rows from the first data frame. Here, when creating a new grid for predictions, you will uses `Animal_Id` to add each red panda’s `Sex` to the data frame created with [expand_grid()](https://tidyr.tidyverse.org/reference/expand_grid.html).
 
 **Your Turn:** Just examine the code below. There is no code checking in this exercise, so feel free to execute just parts of the code (selecting what you want to run and pressing **Run Code**) and experiment with changes to the code. If you brake the code and can't fix it, just click **Start Over**. Press **Submit Answer** when you're done.
 
