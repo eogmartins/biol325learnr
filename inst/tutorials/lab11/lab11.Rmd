@@ -102,7 +102,7 @@ quiz(
   ),
   question(
     "What is the key difference between a predictive model and a causal model?",
-    answer("A predictive model uses regression; a causal model uses correlation."),
+    answer("A predictive model uses correlation; a causal model uses regression."),
     answer("A predictive model estimates what the response will be given the predictors; a causal model estimates what would happen to the response if we intervened and changed a predictor.", correct = TRUE),
     answer("There is no practical difference. A model with high predictive accuracy is always a good causal model."),
     answer("Causal models require experimental data; predictive models work with any data."),
@@ -186,7 +186,7 @@ lake |>
     geom_point(alpha = 0.25, size = 0.9) +
     geom_smooth(method = "lm", se = FALSE, colour = "#5ab4ac") +
     facet_wrap(~ variable, scales = "free_x") +
-    labs(x = NULL, y = "Algal Biomass")
+    labs(x = "Standardized predictor value", y = "Algal Biomass")
 ```
 
 ```{r explore_plot_ex-check}
@@ -515,11 +515,9 @@ tribble(
 )
 ```
 
-In our table, each row is a source of estimates (the true data-generating values [DGVs] or a model estimate), and each column is the causal effect of the variable name that appears to the left of the arrow in the column name. The `est()` calls sit directly in the cells where those model estimates belong, keeping the structure clear at a glance.
+The code below uses `est()` and `tribble()` to build a comparison table of your model estimates against the true DGVs that were used to simulate the data. Each row is a source of values (the true data-generating values [DGVs] or a model estimate), and each column is the causal effect of the variable name that appears to the left of the arrow in the column name. The `est()` calls sit directly in the cells where those model estimates belong, keeping the structure clear at a glance.
 
-The code below uses `est()` and `tribble()` to build a comparison table of your model estimates against the true DGVs that were used to simulate the data.
-
-**Your Turn:** Just inspect the code, then press **Submit Answer**.
+**Your Turn:** Just examine the code, then press **Submit Answer**.
 
 ```{r causal_compare_table, exercise = TRUE, exercise.lines = 12, exercise.setup = "setup_data"}
 tribble(
@@ -698,11 +696,11 @@ grade_this({
 
 **Zooplankton Biomass** (true DGV: −0.55). The DAG-guided model recovers ≈ −0.57. Both AIC models give ≈ −0.41 to −0.42, which is an attenuation of roughly 25%. The effect is in the right direction, but its magnitude is systematically underestimated.
 
-**Nutrient Concentration** (true DGV: +0.50). The DAG-guided model recovers ≈ +0.48. Both AIC models give only ≈ +0.18, which is an attenuation of roughly 64%! This is the most severely distorted estimate in the table. The reason is that nutrient concentration has both a strong positive effect on algal biomass (+0.50) and a direct negative effect on dissolved oxygen (−0.20). When dissolved oxygen is in the model, it captures much of the variation in algal biomass that nutrient concentration would otherwise explain, dramatically suppressing its estimated coefficient.
+**Nutrient Concentration** (true DGV: +0.50). The DAG-guided model recovers ≈ +0.48. Both AIC models give only ≈ +0.18, which is an attenuation of roughly 64%. The reason is that nutrient concentration has both a strong positive effect on algal biomass (+0.50) and a direct negative effect on dissolved oxygen (−0.20). When dissolved oxygen is in the model, it captures much of the variation in algal biomass that nutrient concentration would otherwise explain, dramatically suppressing its estimated coefficient.
 
 **Water Temperature** (true DGV for total effect: +0.50). The DAG-guided model recovers ≈ +0.52. The full model, ranked second in the AIC table, estimates it as only ≈ +0.02. The top ranked model drops water temperature entirely. In both cases, if we were to inadvertently interpret the results causally, AIC would lead us to conclude that water temperature has negligible importance, despite it being a genuine cause of algal biomass with multiple pathways.
 
-**Why do all effects shrink toward zero?** The common cause is including `dissolved_oxygen`, which is a **descendant of** `algal_biomass`, as a predictor. Conditioning on a downstream consequence (descendant) of the response is a form of **post-treatment bias**: the model is partly explaining the response with something the response itself caused. This absorbs variation in `algal_biomass` and compresses the apparent contribution of every genuine cause of it. The effect is consistent across both AIC models, confirming that the damage is done by dissolved oxygen's inclusion, not by any other modelling choice.")
+**Why do all effects shrink toward zero?** The common cause is including `dissolved_oxygen`, which is a **descendant of** `algal_biomass`, as a predictor. The model is partly explaining the response with something the response itself caused. This absorbs variation in `algal_biomass` and compresses the apparent contribution of every genuine cause of it. The effect is consistent across both AIC models, confirming that the damage is done by dissolved oxygen's inclusion, not by any other modelling choice.")
 })
 ```
 
@@ -723,16 +721,6 @@ quiz(
     answer("Because dissolved oxygen is strongly correlated with algal biomass (since it is caused by it), so including it improves out-of-sample predictive accuracy even though it is not a cause.", correct = TRUE),
     answer("Because models without dissolved oxygen violate the normality assumption."),
     answer("Because dissolved oxygen reduces model complexity and is rewarded by the AIC penalty term."),
-    allow_retry = TRUE,
-    random_answer_order = TRUE
-  ),
-  question(
-    "Including dissolved oxygen in the AIC models shrank the estimated effects of zooplankton biomass, nutrient concentration, and water temperature toward zero. What is this phenomenon called?",
-    answer("Omitted variable bias"),
-    answer("Multicollinearity"),
-    answer("Post-treatment bias", correct = TRUE,
-           message = "Post-treatment bias means that conditioning on a downstream consequence of the response absorbs variation that genuine causes would otherwise explain."),
-    answer("Measurement error bias"),
     allow_retry = TRUE,
     random_answer_order = TRUE
   ),
@@ -835,7 +823,7 @@ grade_this({
 
 The DAG-guided approach avoids this by fitting a separate model for each causal question. To estimate the **total** effect of water temperature, you fit `lm(algal_biomass ~ water_temp)`, without any mediators. AIC model selection produces a single model for all predictors simultaneously, which conflates the direct and total effects of any variable that acts partly through other predictors in the set.
 
-**The bottom line:** Excluding a downstream variable (e.g., dissolved oxygen) from the candidate set is a meaningful improvement, as it eliminates the severe attenuation of zooplankton biomass and nutrient concentration effects. But it is not a substitute for causal reasoning. Getting the right answer for water temperature still requires knowing, from the DAG, that its total effect must be estimated from a model fitted without its mediators.")
+**The bottom line:** Excluding a downstream variable (e.g., dissolved oxygen) from the candidate set is a meaningful improvement, as it eliminates the severe attenuation of water temperature, zooplankton biomass, and nutrient concentration effects. But it is not a substitute for causal reasoning. Getting the right answer for water temperature still requires knowing, from the DAG, that its total effect must be estimated from a model fitted without its mediators.")
 })
 ```
 
@@ -937,13 +925,11 @@ ggplot(results, aes(x = estimate, y = Source)) +
 grade_this({
   pass("Each panel tells a clear story about how the two failure modes distort causal estimates.
 
-**Nutrient Concentration**: The AIC-with-DO CI is centred at ≈ +0.18 and sits far to the left of the DGV dashed line at +0.50 — the entire CI excludes the true value. The AIC-without-DO and DAG-guided CIs both overlap the DGV line closely, confirming that removing dissolved oxygen eliminates the descendant bias.
+**Nutrient Concentration**: The AIC-with-DO CI is centred at ≈ +0.18 and sits far to the left of the DGV dashed line at +0.50 (the entire CI excludes the true value). The AIC-without-DO and DAG-guided CIs both overlap the DGV line closely, confirming that removing dissolved oxygen eliminates the descendant bias.
 
 **Zooplankton Biomass**: The AIC-with-DO CI (centred ≈ −0.41) is displaced from the DGV (−0.55) and its CI barely reaches the dashed line. The AIC-without-DO and DAG-guided CIs are closely centred on the DGV. A similar bias pattern to Nutrient Concentration, but somewhat less severe.
 
-**Water Temperature**: The AIC-with-DO model dropped water temperature entirely (no CI shown). The AIC-without-DO CI is centred ≈ +0.44 — shifted left of the DGV (+0.50) because its mediators are in the same model. Only the DAG-guided CI is centred near the DGV dashed line, as it estimates the total effect from a model without mediators.
-
-Notice also that the CI widths are informative: the DAG-guided models fit separate, minimal models for each causal question, giving cleaner (often narrower) intervals around the exposure coefficient than the AIC models, which carry more parameters and add uncertainty from variables included for predictive rather than causal reasons.")
+**Water Temperature**: The AIC-with-DO model dropped water temperature entirely (no estimate shown). The AIC-without-DO CI is centred ≈ +0.44 and shifted left of the DGV (+0.50) because its mediators are in the same model. Only the DAG-guided CI is centred near the DGV dashed line, as it estimates the total effect from a model without mediators.")
 
 })
 ```
